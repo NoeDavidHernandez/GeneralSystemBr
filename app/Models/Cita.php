@@ -10,8 +10,10 @@ use Carbon\Carbon;
 class Cita extends Model
 {
     protected $fillable = [
+        'barberia_id',
         'cliente_id',
         'servicio_id',
+        'barbero_id',
         'fecha',
         'hora_inicio',
         'hora_fin',
@@ -37,6 +39,11 @@ class Cita extends Model
 
     // ─── Relaciones ───────────────────────────────────────────────────────
 
+    public function barberia(): BelongsTo
+    {
+        return $this->belongsTo(Barberia::class);
+    }
+
     public function cliente(): BelongsTo
     {
         return $this->belongsTo(Cliente::class);
@@ -45,6 +52,11 @@ class Cita extends Model
     public function servicio(): BelongsTo
     {
         return $this->belongsTo(Servicio::class);
+    }
+
+    public function barbero(): BelongsTo
+    {
+        return $this->belongsTo(Barbero::class);
     }
 
     public function recordatorios(): HasMany

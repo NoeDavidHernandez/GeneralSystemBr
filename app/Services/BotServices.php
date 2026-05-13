@@ -65,6 +65,30 @@ class BotService
             return;
         }
 
+        // ── Detección de respuesta a recordatorio ─────────────────────────────────
+        // Detectar si el cliente está respondiendo a un recordatorio (SÍ/NO)
+        // aunque no tenga una sesión activa en conv_estado
+        $respuestaLower = strtolower(trim($texto));
+        $esConfirmacion = in_array($respuestaLower, ['sí', 'si', 's', '1', 'confirmo', 'confirmar']);
+        $esCancelacion  = in_array($respuestaLower, ['no', 'no puedo', 'cancelar', '0']);
+
+        if ($esConfirmacion || $esCancelacion) {
+            $citaPendiente = Cita::where('estado', 'pendiente')
+                ->whereHas('cliente', fn($q) => $q->where('telefono', $telefono))
+                ->where('barberia_id', $barberia->id)
+                ->whereDate('fecha', '>=', today())
+                ->orderBy('fecha')
+                ->orderBy('hora_inicio')
+                ->first();
+
+            if ($citaPendiente) {
+                $this->procesarRespuestaRecordatorio(
+                    $telefono, $barberia, $citaPendiente, $esConfirmacion
+                );
+                return;
+            }
+        }
+
         // Sesión expirada: reiniciar suavemente
         if ($estado->estaExpirada()) {
             $estado->reiniciar();
@@ -78,6 +102,7 @@ class BotService
             ConvEstado::PASO_ESPERANDO_FECHA       => $this->pasoFecha($telefono, $barberia, $cliente, $estado, $texto),
             ConvEstado::PASO_ESPERANDO_HORA        => $this->pasoHora($telefono, $barberia, $cliente, $estado, $texto),
             ConvEstado::PASO_CONFIRMANDO_CITA      => $this->pasoConfirmar($telefono, $barberia, $cliente, $estado, $texto),
+            ConvEstado::PASO_CONF_RECORDATORIO     => $this->pasoRespuestaRecordatorio($barberia, $telefono, $texto),
             default                                => $this->pasoInicio($telefono, $barberia, $cliente, $estado, $texto),
         };
     }
@@ -322,6 +347,50 @@ class BotService
 
         // Programar recordatorios en cola
         ProgramarRecordatorios::dispatch($cita);
+    }
+
+    // ─── Lógica de Recordatorios ───────────────────────────────────────────
+
+    private function pasoRespuestaRecordatorio(Barberia $barberia, string $telefono, string $texto): void
+    {
+        // Reutilizamos la lógica de manejo general para detectar SÍ/NO
+        $this->manejar($barberia, $telefono, $texto);
+    }
+
+    private function procesarRespuestaRecordatorio(
+        string   $telefono,
+        Barberia $barberia,
+        Cita     $cita,
+        bool     $confirma
+    ): void {
+        $fecha = Carbon::parse($cita->fecha)->locale('es')->isoFormat('dddd D [de] MMMM');
+        $hora  = Carbon::parse($cita->hora_inicio)->format('g:i A');
+
+        if ($confirma) {
+            $cita->update(['estado' => 'confirmada']);
+
+            $this->api->enviarTexto($telefono, $barberia,
+                "✅ ¡Cita confirmada!\n\n"
+                . "Te esperamos el *{$fecha}* a las *{$hora}* 💈\n\n"
+                . "📍 {$barberia->direccion}\n\n"
+                . "_Recuerda llegar puntual. Tenemos 15 min de tolerancia._"
+            );
+        } else {
+            $cita->update(['estado' => 'cancelada', 'cancelado_por' => 'cliente']);
+
+            $this->api->enviarTexto($telefono, $barberia,
+                "Entendido, tu cita del *{$fecha}* a las *{$hora}* fue cancelada ✔️\n\n"
+                . "Cuando quieras agendar de nuevo escríbenos 😊"
+            );
+
+            // Notificar al admin
+            $this->notificarAdmin($barberia, $cita->cliente,
+                "Canceló su cita del {$fecha} a las {$hora} tras el recordatorio."
+            );
+        }
+        
+        // Reiniciar el estado de la conversación para que no se quede trabado
+        ConvEstado::obtenerOCrear($telefono)->reiniciar();
     }
 
     // ─── Helpers de envío ─────────────────────────────────────────────────
