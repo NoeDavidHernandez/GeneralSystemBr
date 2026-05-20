@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Auth;
 
 class AdminDashboardController extends Controller
 {
@@ -99,7 +100,9 @@ class AdminDashboardController extends Controller
 
     private function calcularKpis(Carbon $inicio, Carbon $fin): array
     {
-        $citas = Cita::whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()]);
+        $barberiaId = Auth::user()->barberia_id;
+        $citas = Cita::where('barberia_id', $barberiaId)
+            ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()]);
 
         $totalCitas      = (clone $citas)->count();
         $completadas     = (clone $citas)->where('estado', 'completada')->count();
@@ -107,14 +110,17 @@ class AdminDashboardController extends Controller
         $noAsistio       = (clone $citas)->where('estado', 'no_asistio')->count();
 
         // Ingresos: usar precio_cobrado si existe, sino el precio del servicio
-        $ingresos = Cita::whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
+        $ingresos = Cita::where('barberia_id', $barberiaId)
+            ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
             ->where('estado', 'completada')
             ->get()
             ->sum(function ($cita) {
                 return $cita->precio_cobrado ?? optional($cita->servicio)->precio ?? 0;
             });
 
-        $clientesNuevos = Cliente::whereBetween('created_at', [$inicio, $fin])->count();
+        $clientesNuevos = Cliente::whereHas('citas', function($q) use ($barberiaId) {
+            $q->where('barberia_id', $barberiaId);
+        })->whereBetween('created_at', [$inicio, $fin])->count();
 
         $tasaCancelacion = $totalCitas > 0
             ? round((($canceladas + $noAsistio) / $totalCitas) * 100, 1)
@@ -133,7 +139,9 @@ class AdminDashboardController extends Controller
 
     private function ingresosPorDia(Carbon $inicio, Carbon $fin): array
     {
-        $citas = Cita::whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
+        $barberiaId = Auth::user()->barberia_id;
+        $citas = Cita::where('barberia_id', $barberiaId)
+            ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
             ->where('estado', 'completada')
             ->with('servicio')
             ->orderBy('fecha')
@@ -153,7 +161,9 @@ class AdminDashboardController extends Controller
 
     private function serviciosPopulares(Carbon $inicio, Carbon $fin): array
     {
-        $servicios = Cita::whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
+        $barberiaId = Auth::user()->barberia_id;
+        $servicios = Cita::where('barberia_id', $barberiaId)
+            ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
             ->whereNotIn('estado', ['cancelada'])
             ->selectRaw('servicio_id, COUNT(*) as total')
             ->groupBy('servicio_id')
@@ -175,7 +185,9 @@ class AdminDashboardController extends Controller
 
     private function estadosCitas(Carbon $inicio, Carbon $fin): array
     {
-        $estados = Cita::whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
+        $barberiaId = Auth::user()->barberia_id;
+        $estados = Cita::where('barberia_id', $barberiaId)
+            ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
             ->selectRaw('estado, COUNT(*) as total')
             ->groupBy('estado')
             ->get();
@@ -201,6 +213,7 @@ class AdminDashboardController extends Controller
 
     private function clientesNuevosVsRecurrentes(Carbon $inicio, Carbon $fin): array
     {
+        $barberiaId = Auth::user()->barberia_id;
         // Agrupar por semanas o meses según el periodo
         $diffDays = $inicio->diffInDays($fin);
 
@@ -235,7 +248,9 @@ class AdminDashboardController extends Controller
         }
 
         // Contar clientes nuevos
-        $clientesNuevos = Cliente::whereBetween('created_at', [$inicio, $fin])->get();
+        $clientesNuevos = Cliente::whereHas('citas', function($q) use ($barberiaId) {
+            $q->where('barberia_id', $barberiaId);
+        })->whereBetween('created_at', [$inicio, $fin])->get();
         foreach ($clientesNuevos as $cliente) {
             $key = $cliente->created_at->format($format);
             if (isset($periodos[$key])) {
@@ -244,7 +259,8 @@ class AdminDashboardController extends Controller
         }
 
         // Contar citas de clientes recurrentes (total_visitas > 1)
-        $citasRecurrentes = Cita::whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
+        $citasRecurrentes = Cita::where('barberia_id', $barberiaId)
+            ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
             ->whereHas('cliente', fn($q) => $q->where('total_visitas', '>', 1))
             ->get();
 
@@ -264,7 +280,9 @@ class AdminDashboardController extends Controller
 
     private function horasPico(Carbon $inicio, Carbon $fin): array
     {
-        $horas = Cita::whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
+        $barberiaId = Auth::user()->barberia_id;
+        $horas = Cita::where('barberia_id', $barberiaId)
+            ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
             ->whereNotIn('estado', ['cancelada'])
             ->selectRaw("SUBSTRING(hora_inicio, 1, 2) as hora, COUNT(*) as total")
             ->groupBy('hora')
@@ -285,6 +303,7 @@ class AdminDashboardController extends Controller
 
     private function tendenciaCitas(Carbon $inicio, Carbon $fin, string $periodo): array
     {
+        $barberiaId = Auth::user()->barberia_id;
         $diffDays = $inicio->diffInDays($fin);
 
         if ($diffDays <= 14) {
@@ -298,7 +317,8 @@ class AdminDashboardController extends Controller
             $labelFmt = 'MMM YYYY';
         }
 
-        $citas = Cita::whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
+        $citas = Cita::where('barberia_id', $barberiaId)
+            ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
             ->selectRaw("fecha, COUNT(*) as total")
             ->groupBy('fecha')
             ->orderBy('fecha')
@@ -326,7 +346,9 @@ class AdminDashboardController extends Controller
 
     private function topClientes(Carbon $inicio, Carbon $fin): array
     {
-        return Cita::whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
+        $barberiaId = Auth::user()->barberia_id;
+        return Cita::where('barberia_id', $barberiaId)
+            ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
             ->where('estado', 'completada')
             ->with('cliente')
             ->get()

@@ -267,5 +267,46 @@ class ServiciosSeeder extends Seeder
         ];
 
         DB::table('servicios')->insert($servicios);
+
+        // ─── SERVICIOS PARA LA BARBERÍA VIP ───────────────────────────────
+        $barberiaVipId = DB::table('barberias')
+            ->where('nombre', 'Barbería VIP')
+            ->value('id');
+
+        if ($barberiaVipId) {
+            $serviciosVip = [
+                [
+                    'barberia_id'      => $barberiaVipId,
+                    'categoria'        => 'Cortes de cabello',
+                    'nombre'           => 'Corte VIP',
+                    'precio'           => 300.00,
+                    'duracion_min'     => 45,
+                    'precio_variable'  => false,
+                    'precio_consultar' => false,
+                    'activo'           => true,
+                ],
+                [
+                    'barberia_id'      => $barberiaVipId,
+                    'categoria'        => 'Cuidado facial',
+                    'nombre'           => 'Mascarilla VIP de Oro',
+                    'precio'           => 150.00,
+                    'duracion_min'     => 30,
+                    'precio_variable'  => false,
+                    'precio_consultar' => false,
+                    'activo'           => true,
+                ],
+                [
+                    'barberia_id'      => $barberiaVipId,
+                    'categoria'        => 'Ritual de barba',
+                    'nombre'           => 'Ritual VIP Barba',
+                    'precio'           => 200.00,
+                    'duracion_min'     => 30,
+                    'precio_variable'  => false,
+                    'precio_consultar' => false,
+                    'activo'           => true,
+                ]
+            ];
+            DB::table('servicios')->insert($serviciosVip);
+        }
     }
 }

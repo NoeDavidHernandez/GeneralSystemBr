@@ -40,5 +40,67 @@ class BarberiaSeeder extends Seeder
             'created_at'        => now(),
             'updated_at'        => now(),
         ]);
+
+        // ─── Usuario de prueba para acceder al panel ──────────────────────
+        DB::table('users')->insert([
+            'name'              => 'Admin Malva',
+            'email'             => 'admin@malvabarber.com',
+            'password'          => \Illuminate\Support\Facades\Hash::make('password123'),
+            'barberia_id'       => $barberiaId,
+            'is_superadmin'     => false,
+            'created_at'        => now(),
+            'updated_at'        => now(),
+        ]);
+
+        // ─── Usuario Super Administrador Global ───────────────────────────
+        DB::table('users')->insert([
+            'name'              => 'Super Admin',
+            'email'             => 'superadmin@sistema.com',
+            'password'          => \Illuminate\Support\Facades\Hash::make('superadmin123'),
+            'barberia_id'       => null, // No pertenece a una barbería específica
+            'is_superadmin'     => true,
+            'created_at'        => now(),
+            'updated_at'        => now(),
+        ]);
+
+        // ─── Dar de alta Barbería VIP (Inquilino 2) ───────────────────────
+        $barberiaVipId = DB::table('barberias')->insertGetId([
+            'nombre'                  => 'Barbería VIP',
+            'direccion'               => 'CDMX, México',
+            'telefono'                => '5551234567',
+            'whatsapp_phone_id'       => 'PHONE_ID_VIP',
+            'whatsapp_token'          => 'TOKEN_VIP',
+            'whatsapp_admin_numero'   => '5215551234567',
+            'horario_json'            => json_encode([
+                'apertura'       => '10:00',
+                'cierre'         => '20:00',
+                'dias_cerrado'   => [0],      // 0 = domingo
+                'comida_inicio'  => '14:00',
+                'comida_fin'     => '15:00',
+            ]),
+            'activo'                  => true,
+            'created_at'              => now(),
+            'updated_at'              => now(),
+        ]);
+
+        DB::table('barberos')->insert([
+            'barberia_id'       => $barberiaVipId,
+            'nombre'            => 'Alex VIP',
+            'color_calendario'  => '#EAB308', // Amarillo
+            'horario_propio_json' => null,
+            'activo'            => true,
+            'created_at'        => now(),
+            'updated_at'        => now(),
+        ]);
+
+        DB::table('users')->insert([
+            'name'              => 'Admin VIP',
+            'email'             => 'admin@barberiavip.com',
+            'password'          => \Illuminate\Support\Facades\Hash::make('password123'),
+            'barberia_id'       => $barberiaVipId,
+            'is_superadmin'     => false,
+            'created_at'        => now(),
+            'updated_at'        => now(),
+        ]);
     }
 }

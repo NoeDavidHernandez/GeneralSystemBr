@@ -98,6 +98,11 @@ class WhatsAppController extends Controller
             return;
         }
 
+        if (! $barberia->activo) {
+            Log::info("WhatsApp: Mensaje ignorado. La barbería {$barberia->nombre} está inactiva.");
+            return;
+        }
+
         foreach ($messages as $message) {
             $this->procesarMensaje($message, $barberia);
         }
@@ -107,8 +112,7 @@ class WhatsAppController extends Controller
     {
         $tipo = $message['type'] ?? 'unknown';
 
-        // Por ahora solo manejamos texto e interactive (botones de lista)
-        // En el futuro se puede extender a audio, imagen, etc.
+
         $texto = match ($tipo) {
             'text'        => trim($message['text']['body'] ?? ''),
             'interactive' => $this->extraerInteractive($message),
@@ -117,7 +121,7 @@ class WhatsAppController extends Controller
 
         if ($texto === null) return;
 
-        $from = $message['from']; // número del cliente ej: "5212223008628"
+        $from = $message['from']; 
         $name = $message['contacts'][0]['profile']['name'] ?? null;
 
         $this->bot->manejar(

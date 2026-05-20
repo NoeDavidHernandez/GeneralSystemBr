@@ -277,10 +277,20 @@
                 <p id="periodo-label">Cargando datos...</p>
             </div>
             <div class="header-actions">
+                <div style="text-align: right; margin-right: 15px; font-size: 0.85rem; color: var(--text-secondary);">
+                    <strong style="color: var(--text-primary); display: block;">{{ Auth::user()->barberia->nombre ?? 'Sin Barbería' }}</strong>
+                    {{ Auth::user()->name }}
+                </div>
                 <button class="theme-toggle" id="theme-toggle" title="Cambiar tema" onclick="toggleTheme()">🌙</button>
                 <a href="#" id="btn-pdf" class="btn-pdf" onclick="descargarPdf(event)">
                     📄 Descargar Reporte PDF
                 </a>
+                <form method="POST" action="{{ route('logout') }}" style="display: inline;">
+                    @csrf
+                    <button type="submit" class="btn-pdf" style="background: var(--red); box-shadow: none;" title="Cerrar sesión">
+                        🚪 Salir
+                    </button>
+                </form>
             </div>
         </header>
 

@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
 class BotService
 {
     public function __construct(
-        private WhatsAppApiService   $api,
+        private WhatsAppApiService    $api,
         private DisponibilidadService $disponibilidad,
     ) {}
 
@@ -32,10 +32,8 @@ class BotService
 
         // ── Guardias ──────────────────────────────────────────────────────
 
-        // Cliente bloqueado: silencio total
         if ($cliente->bloqueado) return;
 
-        // Modo asesor activo: el humano tiene el control, el bot no responde
         if ($estado->modo_asesor) return;
 
         // El cliente quiere hablar con un asesor
@@ -45,13 +43,12 @@ class BotService
                 "Entendido {$cliente->nombre} 👋 En un momento un asesor te atenderá.\n\n"
                 . "Si quieres volver al bot automático escribe *bot*."
             );
-            // Notificar al admin (aquí podrías enviar mensaje al número del dueño)
             $this->notificarAdmin($barberia, $cliente, $texto);
             return;
         }
 
         // Asesor devuelve el control al bot
-        if (strtolower(trim($texto)) === 'bot' && $estado->modo_asesor) {
+        if (strtolower(trim($texto)) === 'bot') {
             $estado->desactivarModoAsesor();
             $this->api->enviarTexto($telefono, $barberia,
                 "¡De vuelta con el asistente! 🤖 ¿En qué te puedo ayudar?"
@@ -65,9 +62,9 @@ class BotService
             return;
         }
 
-        // ── Detección de respuesta a recordatorio ─────────────────────────────────
-        // Detectar si el cliente está respondiendo a un recordatorio (SÍ/NO)
-        // aunque no tenga una sesión activa en conv_estado
+        // ── Detección de respuesta a recordatorio ─────────────────────────
+        // Va ANTES del router de pasos para que funcione aunque no haya sesión activa.
+        // CORRECCIÓN: ya no existe pasoRespuestaRecordatorio() que causaba loop infinito.
         $respuestaLower = strtolower(trim($texto));
         $esConfirmacion = in_array($respuestaLower, ['sí', 'si', 's', '1', 'confirmo', 'confirmar']);
         $esCancelacion  = in_array($respuestaLower, ['no', 'no puedo', 'cancelar', '0']);
@@ -96,14 +93,13 @@ class BotService
 
         // ── Router de pasos ───────────────────────────────────────────────
         match ($estado->paso) {
-            ConvEstado::PASO_INICIO                => $this->pasoInicio($telefono, $barberia, $cliente, $estado, $texto),
-            ConvEstado::PASO_ESPERANDO_NOMBRE      => $this->pasoNombre($telefono, $barberia, $cliente, $estado, $texto),
-            ConvEstado::PASO_ESPERANDO_SERVICIO    => $this->pasoServicio($telefono, $barberia, $cliente, $estado, $texto),
-            ConvEstado::PASO_ESPERANDO_FECHA       => $this->pasoFecha($telefono, $barberia, $cliente, $estado, $texto),
-            ConvEstado::PASO_ESPERANDO_HORA        => $this->pasoHora($telefono, $barberia, $cliente, $estado, $texto),
-            ConvEstado::PASO_CONFIRMANDO_CITA      => $this->pasoConfirmar($telefono, $barberia, $cliente, $estado, $texto),
-            ConvEstado::PASO_CONF_RECORDATORIO     => $this->pasoRespuestaRecordatorio($barberia, $telefono, $texto),
-            default                                => $this->pasoInicio($telefono, $barberia, $cliente, $estado, $texto),
+            ConvEstado::PASO_INICIO             => $this->pasoInicio($telefono, $barberia, $cliente, $estado, $texto),
+            ConvEstado::PASO_ESPERANDO_NOMBRE   => $this->pasoNombre($telefono, $barberia, $cliente, $estado, $texto),
+            ConvEstado::PASO_ESPERANDO_SERVICIO => $this->pasoServicio($telefono, $barberia, $cliente, $estado, $texto),
+            ConvEstado::PASO_ESPERANDO_FECHA    => $this->pasoFecha($telefono, $barberia, $cliente, $estado, $texto),
+            ConvEstado::PASO_ESPERANDO_HORA     => $this->pasoHora($telefono, $barberia, $cliente, $estado, $texto),
+            ConvEstado::PASO_CONFIRMANDO_CITA   => $this->pasoConfirmar($telefono, $barberia, $cliente, $estado, $texto),
+            default                             => $this->pasoInicio($telefono, $barberia, $cliente, $estado, $texto),
         };
     }
 
@@ -120,7 +116,6 @@ class BotService
              . "Para agendar tu cita necesito algunos datos.\n\n"
              . "¿Cuál es tu nombre?";
 
-        // Si ya tenemos el nombre del perfil de WhatsApp, saltamos ese paso
         if ($nombre) {
             $estado->avanzar(ConvEstado::PASO_ESPERANDO_SERVICIO, ['nombre' => $nombre]);
             $this->enviarMenuServicios($telefono, $barberia, $cliente);
@@ -142,10 +137,8 @@ class BotService
             return;
         }
 
-        // Guardar nombre en el cliente
         $cliente->update(['nombre' => ucwords(strtolower($texto))]);
         $estado->avanzar(ConvEstado::PASO_ESPERANDO_SERVICIO, ['nombre' => $cliente->nombre]);
-
         $this->enviarMenuServicios($telefono, $barberia, $cliente);
     }
 
@@ -153,7 +146,6 @@ class BotService
         string $telefono, Barberia $barberia,
         Cliente $cliente, ConvEstado $estado, string $texto
     ): void {
-        // El cliente puede escribir el número o el nombre del servicio
         $servicio = $this->buscarServicio($texto, $barberia);
 
         if (! $servicio) {
@@ -164,7 +156,6 @@ class BotService
             return;
         }
 
-        // Servicio de precio variable: aclarar antes de continuar
         if ($servicio->precio_variable) {
             $this->api->enviarTexto($telefono, $barberia,
                 "Perfecto, elegiste *{$servicio->nombre}* 💇\n\n"
@@ -175,7 +166,6 @@ class BotService
             return;
         }
 
-        // Servicio que requiere consulta directa
         if ($servicio->precio_consultar) {
             $this->api->enviarTexto($telefono, $barberia,
                 "Para *{$servicio->nombre}* el precio varía según tu caso 💬\n\n"
@@ -186,12 +176,10 @@ class BotService
         }
 
         $estado->avanzar(ConvEstado::PASO_ESPERANDO_FECHA, ['servicio_id' => $servicio->id]);
-
         $this->api->enviarTexto($telefono, $barberia,
             "Genial, *{$servicio->nombre}* — {$servicio->precioTexto()} 💰\n\n"
             . "¿Para qué fecha te gustaría? Aquí los días disponibles:"
         );
-
         $this->enviarDiasDisponibles($telefono, $barberia);
     }
 
@@ -199,7 +187,6 @@ class BotService
         string $telefono, Barberia $barberia,
         Cliente $cliente, ConvEstado $estado, string $texto
     ): void {
-        // El cliente puede escribir "1" (número del listado) o "hoy", "mañana", o la fecha
         $fecha = $this->parsearFecha($texto, $barberia);
 
         if (! $fecha) {
@@ -210,11 +197,10 @@ class BotService
             return;
         }
 
-        // Guardar fecha y mostrar horarios disponibles
         $estado->avanzar(ConvEstado::PASO_ESPERANDO_HORA, ['fecha' => $fecha]);
 
-        $servicio  = Servicio::find($estado->datos_temp['servicio_id']);
-        $slots     = $this->disponibilidad->slotsDia($barberia, $fecha, $servicio->duracion_min);
+        $servicio = Servicio::find($estado->datos_temp['servicio_id']);
+        $slots    = $this->disponibilidad->slotsDia($barberia, $fecha, $servicio->duracion_min);
 
         if ($slots->isEmpty()) {
             $this->api->enviarTexto($telefono, $barberia,
@@ -241,7 +227,6 @@ class BotService
         $fecha    = $datos['fecha'];
         $servicio = Servicio::find($datos['servicio_id']);
 
-        // Buscar el slot que eligió (por número o por hora)
         $slots = $this->disponibilidad->slotsDia($barberia, $fecha, $servicio->duracion_min);
         $slot  = $this->buscarSlot($texto, $slots);
 
@@ -253,7 +238,6 @@ class BotService
             return;
         }
 
-        // Verificar race condition: que el slot siga libre
         if (! $this->disponibilidad->slotSigueDisponible($barberia, $fecha, $slot['hora'], $servicio->duracion_min)) {
             $this->api->enviarTexto($telefono, $barberia,
                 "Ese horario acaba de ocuparse 😅 Elige otro:"
@@ -268,7 +252,6 @@ class BotService
             'barbero_id' => $slot['barbero_id'],
         ]);
 
-        // Mostrar resumen completo para confirmar
         $fechaFormato = Carbon::parse($fecha)->locale('es')->isoFormat('dddd D [de] MMMM');
         $barberos     = Barbero::where('barberia_id', $barberia->id)->count();
 
@@ -284,7 +267,6 @@ class BotService
         }
 
         $resumen .= "\n¿Confirmas tu cita? Escribe *sí* para agendar o *no* para cancelar.";
-
         $this->api->enviarTexto($telefono, $barberia, $resumen);
     }
 
@@ -303,14 +285,12 @@ class BotService
                 return;
             }
 
-            // No entendió
             $this->api->enviarTexto($telefono, $barberia,
                 "Responde *sí* para confirmar o *no* para cancelar."
             );
             return;
         }
 
-        // ── Crear la cita ─────────────────────────────────────────────────
         $datos    = $estado->datos_temp;
         $servicio = Servicio::find($datos['servicio_id']);
         $horaFin  = Carbon::createFromFormat('H:i', $datos['hora'])
@@ -328,13 +308,9 @@ class BotService
             'estado'      => 'pendiente',
         ]);
 
-        // Incrementar visitas del cliente
         $cliente->increment('total_visitas');
-
-        // Limpiar sesión
         $estado->reiniciar();
 
-        // Confirmar al cliente
         $fechaFormato = Carbon::parse($datos['fecha'])->locale('es')->isoFormat('dddd D [de] MMMM');
         $this->api->enviarTexto($telefono, $barberia,
             "🎉 ¡Tu cita está agendada!\n\n"
@@ -345,17 +321,10 @@ class BotService
             . "¡Te esperamos! 💈"
         );
 
-        // Programar recordatorios en cola
         ProgramarRecordatorios::dispatch($cita);
     }
 
-    // ─── Lógica de Recordatorios ───────────────────────────────────────────
-
-    private function pasoRespuestaRecordatorio(Barberia $barberia, string $telefono, string $texto): void
-    {
-        // Reutilizamos la lógica de manejo general para detectar SÍ/NO
-        $this->manejar($barberia, $telefono, $texto);
-    }
+    // ─── Recordatorios ────────────────────────────────────────────────────
 
     private function procesarRespuestaRecordatorio(
         string   $telefono,
@@ -367,7 +336,7 @@ class BotService
         $hora  = Carbon::parse($cita->hora_inicio)->format('g:i A');
 
         if ($confirma) {
-            $cita->update(['estado' => 'confirmada']);
+            $cita->confirmar();
 
             $this->api->enviarTexto($telefono, $barberia,
                 "✅ ¡Cita confirmada!\n\n"
@@ -376,20 +345,20 @@ class BotService
                 . "_Recuerda llegar puntual. Tenemos 15 min de tolerancia._"
             );
         } else {
-            $cita->update(['estado' => 'cancelada', 'cancelado_por' => 'cliente']);
+            // CORRECCIÓN: eliminado 'cancelado_por' — columna que no existe en la migración
+            $cita->cancelar('Cliente canceló al responder recordatorio');
 
             $this->api->enviarTexto($telefono, $barberia,
                 "Entendido, tu cita del *{$fecha}* a las *{$hora}* fue cancelada ✔️\n\n"
                 . "Cuando quieras agendar de nuevo escríbenos 😊"
             );
 
-            // Notificar al admin
             $this->notificarAdmin($barberia, $cita->cliente,
                 "Canceló su cita del {$fecha} a las {$hora} tras el recordatorio."
             );
         }
-        
-        // Reiniciar el estado de la conversación para que no se quede trabado
+
+        // Limpiar sesión para que no quede trabada
         ConvEstado::obtenerOCrear($telefono)->reiniciar();
     }
 
@@ -403,10 +372,9 @@ class BotService
             ->orderBy('id')
             ->get();
 
-        $msg = "Hola *{$cliente->nombre}* 😊 Estos son nuestros servicios:\n\n";
-
+        $msg             = "Hola *{$cliente->nombre}* 😊 Estos son nuestros servicios:\n\n";
         $categoriaActual = '';
-        $contador = 1;
+        $contador        = 1;
 
         foreach ($servicios as $servicio) {
             if ($servicio->categoria !== $categoriaActual) {
@@ -418,7 +386,6 @@ class BotService
         }
 
         $msg .= "\nEscribe el *número* del servicio que deseas.";
-
         $this->api->enviarTexto($telefono, $barberia, $msg);
     }
 
@@ -433,7 +400,7 @@ class BotService
             return;
         }
 
-        $msg  = "📅 *Días disponibles:*\n\n";
+        $msg = "📅 *Días disponibles:*\n\n";
         $dias->each(function ($fecha, $i) use (&$msg) {
             $carbon = Carbon::parse($fecha)->locale('es');
             $label  = match (true) {
@@ -461,7 +428,6 @@ class BotService
     private function responderFueraDeHorario(
         string $telefono, Barberia $barberia, ConvEstado $estado
     ): void {
-        // Solo responder una vez por sesión fuera de horario (no spam)
         if ($estado->paso === ConvEstado::PASO_FUERA_DE_HORARIO) return;
 
         $estado->avanzar(ConvEstado::PASO_FUERA_DE_HORARIO);
@@ -495,40 +461,28 @@ class BotService
 
     private function buscarServicio(string $texto, Barberia $barberia): ?Servicio
     {
-        $texto = trim($texto);
-
+        $texto     = trim($texto);
         $servicios = Servicio::where('barberia_id', $barberia->id)
             ->where('activo', true)
             ->orderBy('id')
             ->get();
 
-        // Por número
         if (is_numeric($texto)) {
-            $idx = (int) $texto - 1;
-            return $servicios->values()->get($idx);
+            return $servicios->values()->get((int) $texto - 1);
         }
 
-        // Por nombre aproximado (case insensitive)
-        return $servicios->first(function ($s) use ($texto) {
-            return str_contains(
-                strtolower($s->nombre),
-                strtolower($texto)
-            );
-        });
+        return $servicios->first(fn($s) => str_contains(strtolower($s->nombre), strtolower($texto)));
     }
 
     private function parsearFecha(string $texto, Barberia $barberia): ?string
     {
-        $texto = strtolower(trim($texto));
+        $texto           = strtolower(trim($texto));
         $diasDisponibles = $this->disponibilidad->diasDisponibles($barberia, 7);
 
-        // Por número del listado
         if (is_numeric($texto)) {
-            $idx = (int) $texto - 1;
-            return $diasDisponibles->values()->get($idx);
+            return $diasDisponibles->values()->get((int) $texto - 1);
         }
 
-        // Palabras clave
         if (in_array($texto, ['hoy', 'today'])) {
             $hoy = now()->toDateString();
             return $diasDisponibles->contains($hoy) ? $hoy : null;
@@ -539,7 +493,6 @@ class BotService
             return $diasDisponibles->contains($manana) ? $manana : null;
         }
 
-        // Intentar parsear fecha en español (ej: "lunes 9 de junio")
         try {
             Carbon::setLocale('es');
             $fecha = Carbon::parse($texto)->toDateString();
@@ -553,17 +506,14 @@ class BotService
     {
         $texto = trim($texto);
 
-        // Por número
         if (is_numeric($texto)) {
-            $idx = (int) $texto - 1;
-            return $slots->values()->get($idx);
+            return $slots->values()->get((int) $texto - 1);
         }
 
-        // Por hora escrita (ej: "3pm", "15:00")
-        return $slots->first(function ($slot) use ($texto) {
-            return str_contains(strtolower($slot['hora_formato']), strtolower($texto))
-                || str_contains($slot['hora'], $texto);
-        });
+        return $slots->first(fn($slot) =>
+            str_contains(strtolower($slot['hora_formato']), strtolower($texto))
+            || str_contains($slot['hora'], $texto)
+        );
     }
 
     private function quiereAsesor(string $texto): bool

@@ -99,6 +99,7 @@ class DatosPruebaSeeder extends Seeder
                     ->format('H:i');
 
                 Cita::create([
+                    'barberia_id'    => $servicio->barberia_id,
                     'cliente_id'     => $cliente->id,
                     'servicio_id'    => $servicio->id,
                     'fecha'          => $fecha->toDateString(),

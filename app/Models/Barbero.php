@@ -11,6 +11,7 @@ class Barbero extends Model
     protected $fillable = [
         'barberia_id',
         'nombre',
+        'telefono',
         'color_calendario',
         'horario_propio_json',
         'activo',
