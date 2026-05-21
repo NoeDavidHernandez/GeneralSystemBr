@@ -28,7 +28,7 @@ class EnviarRecordatorio implements ShouldQueue
 
     public function handle(WhatsAppApiService $api): void
     {
-        $cita = Cita::with(['cliente', 'servicio', 'barberia'])->find($this->citaId);
+        $cita = Cita::with(['cliente', 'servicios', 'barberia'])->find($this->citaId);
 
         // Validaciones antes de enviar
         if (! $cita) return;
@@ -73,6 +73,8 @@ class EnviarRecordatorio implements ShouldQueue
         $fecha  = Carbon::parse($cita->fecha)->locale('es')->isoFormat('dddd D [de] MMMM');
         $hora   = Carbon::parse($cita->hora_inicio)->format('g:i A');
         $nombre = $cita->cliente->nombre;
+        
+        $nombresServicios = $cita->servicios->pluck('nombre')->join(', ');
 
         return match ($this->tipo) {
 
@@ -80,7 +82,7 @@ class EnviarRecordatorio implements ShouldQueue
                 "💈 *Recordatorio de cita — {$cita->barberia->nombre}*\n\n"
                 . "Hola *{$nombre}* 👋\n\n"
                 . "Te recordamos que mañana tienes cita:\n\n"
-                . "✂️ *{$cita->servicio->nombre}*\n"
+                . "✂️ *{$nombresServicios}*\n"
                 . "📅 {$fecha}\n"
                 . "🕐 {$hora}\n"
                 . "📍 {$cita->barberia->direccion}\n\n"
@@ -88,8 +90,8 @@ class EnviarRecordatorio implements ShouldQueue
                 . "Si no puedes asistir responde *NO* ❌\n\n"
                 . "_Recuerda que puedes cancelar con mínimo 2 horas de anticipación._",
 
-            '1h_antes' =>
-                "⏰ *¡Tu cita es en 1 hora!*\n\n"
+            '30m_antes' =>
+                "⏰ *¡Tu cita es en 30 minutos!*\n\n"
                 . "Hola *{$nombre}*, te esperamos a las *{$hora}* en {$cita->barberia->nombre} 💈\n\n"
                 . "📍 {$cita->barberia->direccion}\n\n"
                 . "Si no puedes venir avísanos respondiendo *NO PUEDO*.\n\n"

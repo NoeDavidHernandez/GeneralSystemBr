@@ -28,11 +28,11 @@ class ProgramarRecordatorios implements ShouldQueue
                 ->delay($momento24h);
         }
 
-        // ── Recordatorio 1 hora antes ─────────────────────────────────────
-        $momento1h = $inicioCita->copy()->subHour();
-        if ($momento1h->isFuture()) {
-            EnviarRecordatorio::dispatch($this->cita->id, '1h_antes')
-                ->delay($momento1h);
+        // ── Recordatorio 30 minutos antes ─────────────────────────────────────
+        $momento30m = $inicioCita->copy()->subMinutes(30);
+        if ($momento30m->isFuture()) {
+            EnviarRecordatorio::dispatch($this->cita->id, '30m_antes')
+                ->delay($momento30m);
         }
 
         // ── Verificar confirmación 2 horas antes ──────────────────────────

@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Cita;
 use App\Models\Cliente;
 use App\Models\Servicio;
+use App\Models\Barbero;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class AdminDashboardController extends Controller
 {
@@ -35,13 +37,58 @@ class AdminDashboardController extends Controller
             'ingresos_por_dia'   => $this->ingresosPorDia($fechaInicio, $fechaFin),
             'servicios_populares'=> $this->serviciosPopulares($fechaInicio, $fechaFin),
             'estados_citas'      => $this->estadosCitas($fechaInicio, $fechaFin),
-            'clientes_nuevos_vs_recurrentes' => $this->clientesNuevosVsRecurrentes($fechaInicio, $fechaFin),
-            'horas_pico'         => $this->horasPico($fechaInicio, $fechaFin),
             'tendencia_citas'    => $this->tendenciaCitas($fechaInicio, $fechaFin, $periodo),
         ]);
     }
 
+    // ─── Citas pendientes (vista lista) ─────────────────────────────────────
+
+    public function citasPendientes(): JsonResponse
+    {
+        $barberiaId = Auth::user()->barberia_id;
+        $citas = Cita::where('barberia_id', $barberiaId)
+            ->whereIn('estado', ['pendiente', 'confirmada'])
+            ->whereDate('fecha', '>=', today())
+            ->with(['cliente', 'servicios', 'barbero'])
+            ->orderBy('fecha')
+            ->orderBy('hora_inicio')
+            ->get()
+            ->map(fn($c) => [
+                'id'       => $c->id,
+                'cliente'  => $c->cliente->nombre ?? 'Sin nombre',
+                'telefono' => $c->cliente->telefono ?? '',
+                'servicios'=> $c->nombresServicios(),
+                'fecha'    => Carbon::parse($c->fecha)->locale('es')->isoFormat('dddd D [de] MMMM'),
+                'hora'     => Carbon::parse($c->hora_inicio)->format('g:i A'),
+                'barbero'  => $c->barbero->nombre ?? 'Cualquiera',
+                'estado'   => $c->estado,
+            ]);
+
+        return response()->json($citas);
+    }
+
     // ─── Exportar PDF ─────────────────────────────────────────────────────
+
+    public function completarCita(Request $request, Cita $cita)
+    {
+        $barberiaId = Auth::user()->barberia_id;
+        
+        if ($cita->barberia_id !== $barberiaId) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        $cita->update([
+            'estado' => 'completada',
+            // Si quieres capturar el precio cobrado exacto lo podrías pasar por el Request,
+            // por ahora, asumiremos que se cobró lo que valen los servicios (o precio variable resuelto manual)
+        ]);
+
+        // Disparar mensaje de WhatsApp para pedir calificación
+        $botService = app(\App\Services\BotService::class);
+        $botService->pedirCalificacion($cita);
+
+        return response()->json(['success' => true]);
+    }
 
     public function exportarPdf(Request $request)
     {
@@ -109,13 +156,14 @@ class AdminDashboardController extends Controller
         $canceladas      = (clone $citas)->where('estado', 'cancelada')->count();
         $noAsistio       = (clone $citas)->where('estado', 'no_asistio')->count();
 
-        // Ingresos: usar precio_cobrado si existe, sino el precio del servicio
+        // Ingresos: usar precio_cobrado si existe, sino la suma de los servicios de la cita
         $ingresos = Cita::where('barberia_id', $barberiaId)
             ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
             ->where('estado', 'completada')
+            ->with('servicios')
             ->get()
             ->sum(function ($cita) {
-                return $cita->precio_cobrado ?? optional($cita->servicio)->precio ?? 0;
+                return $cita->precio_cobrado ?? $cita->servicios->sum('precio');
             });
 
         $clientesNuevos = Cliente::whereHas('citas', function($q) use ($barberiaId) {
@@ -143,7 +191,7 @@ class AdminDashboardController extends Controller
         $citas = Cita::where('barberia_id', $barberiaId)
             ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
             ->where('estado', 'completada')
-            ->with('servicio')
+            ->with('servicios')
             ->orderBy('fecha')
             ->get()
             ->groupBy(fn($cita) => $cita->fecha->format('Y-m-d'));
@@ -153,7 +201,7 @@ class AdminDashboardController extends Controller
 
         foreach ($citas as $fecha => $grupo) {
             $labels[] = Carbon::parse($fecha)->locale('es')->isoFormat('D MMM');
-            $data[]   = round($grupo->sum(fn($c) => $c->precio_cobrado ?? optional($c->servicio)->precio ?? 0), 2);
+            $data[]   = round($grupo->sum(fn($c) => $c->precio_cobrado ?? $c->servicios->sum('precio')), 2);
         }
 
         return compact('labels', 'data');
@@ -162,25 +210,24 @@ class AdminDashboardController extends Controller
     private function serviciosPopulares(Carbon $inicio, Carbon $fin): array
     {
         $barberiaId = Auth::user()->barberia_id;
-        $servicios = Cita::where('barberia_id', $barberiaId)
-            ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
-            ->whereNotIn('estado', ['cancelada'])
-            ->selectRaw('servicio_id, COUNT(*) as total')
-            ->groupBy('servicio_id')
+
+        // Consultar desde la tabla pivote cita_servicio
+        $rows = DB::table('cita_servicio')
+            ->join('citas', 'cita_servicio.cita_id', '=', 'citas.id')
+            ->join('servicios', 'cita_servicio.servicio_id', '=', 'servicios.id')
+            ->where('citas.barberia_id', $barberiaId)
+            ->whereBetween('citas.fecha', [$inicio->toDateString(), $fin->toDateString()])
+            ->whereNotIn('citas.estado', ['cancelada'])
+            ->select('servicios.nombre', DB::raw('COUNT(*) as total'))
+            ->groupBy('servicios.id', 'servicios.nombre')
             ->orderByDesc('total')
             ->limit(10)
             ->get();
 
-        $labels = [];
-        $data   = [];
-
-        foreach ($servicios as $s) {
-            $servicio = Servicio::find($s->servicio_id);
-            $labels[] = $servicio ? $servicio->nombre : "Servicio #{$s->servicio_id}";
-            $data[]   = $s->total;
-        }
-
-        return compact('labels', 'data');
+        return [
+            'labels' => $rows->pluck('nombre')->toArray(),
+            'data'   => $rows->pluck('total')->toArray(),
+        ];
     }
 
     private function estadosCitas(Carbon $inicio, Carbon $fin): array
@@ -350,7 +397,7 @@ class AdminDashboardController extends Controller
         return Cita::where('barberia_id', $barberiaId)
             ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
             ->where('estado', 'completada')
-            ->with('cliente')
+            ->with(['cliente', 'servicios'])
             ->get()
             ->groupBy('cliente_id')
             ->map(function ($citas) {
@@ -358,7 +405,7 @@ class AdminDashboardController extends Controller
                 return [
                     'nombre'  => $cliente ? $cliente->nombre : 'Desconocido',
                     'visitas' => $citas->count(),
-                    'gasto'   => round($citas->sum(fn($c) => $c->precio_cobrado ?? optional($c->servicio)->precio ?? 0), 2),
+                    'gasto'   => round($citas->sum(fn($c) => $c->precio_cobrado ?? $c->servicios->sum('precio')), 2),
                 ];
             })
             ->sortByDesc('visitas')

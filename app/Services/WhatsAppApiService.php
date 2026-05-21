@@ -8,7 +8,19 @@ use Illuminate\Support\Facades\Log;
 
 class WhatsAppApiService
 {
-    private const BASE_URL = 'https://graph.facebook.com/v19.0';
+    private const BASE_URL = 'https://graph.facebook.com/v25.0';
+
+    // WhatsApp internamente agrega un '1' a los números de México móvil (521XXXXXXXXXX)
+    // pero la API de Meta espera el formato E.164 estándar (52XXXXXXXXXX).
+    // Este método normaliza el número antes de enviarlo.
+    private function normalizarTelefono(string $telefono): string
+    {
+        // Si es número mexicano con prefijo 521 + 10 dígitos (13 dígitos total) → quitar el 1
+        if (preg_match('/^521(\d{10})$/', $telefono, $m)) {
+            return '52' . $m[1];
+        }
+        return $telefono;
+    }
 
     // ─── Mensajes de texto simples ────────────────────────────────────────
 
@@ -97,6 +109,11 @@ class WhatsAppApiService
 
     private function enviar(Barberia $barberia, array $payload): bool
     {
+        // Normalizar número de destino (México: 521XXXXXXXXXX → 52XXXXXXXXXX)
+        if (isset($payload['to'])) {
+            $payload['to'] = $this->normalizarTelefono($payload['to']);
+        }
+
         try {
             $response = Http::withToken($barberia->whatsapp_token)
                 ->timeout(10)

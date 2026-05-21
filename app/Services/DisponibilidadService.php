@@ -26,7 +26,7 @@ class DisponibilidadService
      * Devuelve los próximos N días disponibles (no cerrados, no bloqueados).
      * El bot los muestra al cliente para que elija fecha.
      */
-    public function diasDisponibles(Barberia $barberia, int $cantidad = 7): Collection
+    public function diasDisponibles(Barberia $barberia, int $cantidad = 7, ?int $barberoId = null): Collection
     {
         $horario = $barberia->horarioParseado();
         $diasCerrado = $horario['dias_cerrado'] ?? self::DIAS_CERRADO;
@@ -52,7 +52,7 @@ class DisponibilidadService
             }
 
             // Verificar que tenga al menos un slot libre ese día
-            if ($this->slotsDia($barberia, $carbon->toDateString())->isNotEmpty()) {
+            if ($this->slotsDia($barberia, $carbon->toDateString(), 30, $barberoId)->isNotEmpty()) {
                 $dias->push($carbon->toDateString());
             }
 
@@ -68,7 +68,7 @@ class DisponibilidadService
      *
      * Retorna Collection de ['hora' => '11:00', 'barbero_id' => 3, 'barbero_nombre' => 'Carlos']
      */
-    public function slotsDia(Barberia $barberia, string $fecha, int $duracionMin = 30): Collection
+    public function slotsDia(Barberia $barberia, string $fecha, int $duracionMin = 30, ?int $barberoId = null): Collection
     {
         $horario   = $barberia->horarioParseado();
         $apertura  = $horario['apertura']  ?? '11:00';
@@ -87,12 +87,17 @@ class DisponibilidadService
 
         // Obtener barberos activos de esta barbería
         $barberos = Barbero::where('barberia_id', $barberia->id)
-            ->where('activo', true)
-            ->get();
+            ->where('activo', true);
+            
+        if ($barberoId) {
+            $barberos->where('id', $barberoId);
+        }
+        
+        $barberos = $barberos->get();
 
         // Si no hay barberos registrados, crear uno "virtual" para compatibilidad
         // con barberías de un solo dueño que no configuraron barberos
-        if ($barberos->isEmpty()) {
+        if ($barberos->isEmpty() && !$barberoId) {
             $barberos = collect([(object)[
                 'id'     => null,
                 'nombre' => $barberia->nombre,

@@ -23,9 +23,10 @@ class SuperAdminController extends Controller
         // Ingresos globales (suma de precio_cobrado o precio de servicio)
         // Nota: esto puede ser pesado en grandes volúmenes, idealmente se usaría caché o una tabla resumen
         $ingresosGlobales = Cita::where('estado', 'completada')
+            ->with('servicios')
             ->get()
             ->sum(function ($cita) {
-                return $cita->precio_cobrado ?? optional($cita->servicio)->precio ?? 0;
+                return $cita->precio_cobrado ?? $cita->servicios->sum('precio');
             });
 
         // Lista de todas las barberías
@@ -69,9 +70,10 @@ class SuperAdminController extends Controller
             // Ingresos de esta barbería
             $ingresosBarberia = Cita::where('barberia_id', $barberia->id)
                 ->where('estado', 'completada')
+                ->with('servicios')
                 ->get()
                 ->sum(function ($cita) {
-                    return $cita->precio_cobrado ?? optional($cita->servicio)->precio ?? 0;
+                    return $cita->precio_cobrado ?? $cita->servicios->sum('precio');
                 });
             $ingresos[] = $ingresosBarberia;
 

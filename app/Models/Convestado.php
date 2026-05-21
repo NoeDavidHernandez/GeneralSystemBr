@@ -26,12 +26,16 @@ class ConvEstado extends Model
     // ─── Pasos del flujo del bot ──────────────────────────────────────────
     // Se definen como constantes para evitar strings sueltos en el código
     const PASO_INICIO                    = 'inicio';
+    const PASO_ESPERANDO_OPCION_MENU     = 'esperando_opcion_menu';
     const PASO_ESPERANDO_NOMBRE          = 'esperando_nombre';
     const PASO_ESPERANDO_SERVICIO        = 'esperando_servicio';
+    const PASO_AGREGAR_OTRO_SERVICIO     = 'agregar_otro_servicio';
+    const PASO_ESPERANDO_BARBERO         = 'esperando_barbero';
     const PASO_ESPERANDO_FECHA           = 'esperando_fecha';
     const PASO_ESPERANDO_HORA            = 'esperando_hora';
     const PASO_CONFIRMANDO_CITA          = 'confirmando_cita';
     const PASO_CONF_RECORDATORIO         = 'esperando_confirmacion_recordatorio';
+    const PASO_ESPERANDO_CALIFICACION    = 'esperando_calificacion';
     const PASO_MODO_ASESOR               = 'modo_asesor';
     const PASO_FUERA_DE_HORARIO          = 'fuera_de_horario';
 

@@ -58,6 +58,12 @@ class WhatsAppController extends Controller
 
     private function firmaValida(Request $request): bool
     {
+        // En local/dev, omitimos la validación de firma para facilitar pruebas.
+        // En producción, cambiar a false para activar seguridad HMAC.
+        if (config('app.env') !== 'production') {
+            return true;
+        }
+
         $signature = $request->header('X-Hub-Signature-256', '');
         $secret    = config('services.whatsapp.app_secret');
 
@@ -72,24 +78,27 @@ class WhatsAppController extends Controller
 
     private function procesarPayload(array $payload): void
     {
-        // Estructura del payload de Meta Cloud API:
-        // payload.entry[].changes[].value.messages[].{from, body, type}
-        // payload.entry[].changes[].value.metadata.phone_number_id  ← identifica la barbería
-
         $entry = $payload['entry'][0] ?? null;
         if (! $entry) return;
 
         $change = $entry['changes'][0] ?? null;
         if (! $change) return;
 
-        $value    = $change['value'] ?? [];
-        $messages = $value['messages'] ?? [];
+        $value         = $change['value'] ?? [];
+        $phoneNumberId = $value['metadata']['phone_number_id'] ?? null;
+        $messages      = $value['messages'] ?? [];
 
-        if (empty($messages)) return; // puede ser un status update, no un mensaje
+        // DEBUG TEMPORAL
+        Log::info('WhatsApp DEBUG', [
+            'phone_number_id' => $phoneNumberId,
+            'has_messages'    => ! empty($messages),
+            'has_statuses'    => isset($value['statuses']),
+        ]);
+
+        if (empty($messages)) return; // status update, ignorar
 
         // Identificar a qué barbería pertenece este número de WhatsApp
-        $phoneNumberId = $value['metadata']['phone_number_id'] ?? null;
-        $barberia = Barberia::where('whatsapp_phone_id', $phoneNumberId)->first();
+        $barberia = \App\Models\Barberia::where('whatsapp_phone_id', $phoneNumberId)->first();
 
         if (! $barberia) {
             Log::warning('WhatsApp: phone_number_id sin barbería asociada', [

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Carbon\Carbon;
 
@@ -12,7 +13,6 @@ class Cita extends Model
     protected $fillable = [
         'barberia_id',
         'cliente_id',
-        'servicio_id',
         'barbero_id',
         'fecha',
         'hora_inicio',
@@ -49,9 +49,9 @@ class Cita extends Model
         return $this->belongsTo(Cliente::class);
     }
 
-    public function servicio(): BelongsTo
+    public function servicios(): BelongsToMany
     {
-        return $this->belongsTo(Servicio::class);
+        return $this->belongsToMany(Servicio::class, 'cita_servicio');
     }
 
     public function barbero(): BelongsTo
@@ -83,6 +83,25 @@ class Cita extends Model
 
     // ─── Helpers ─────────────────────────────────────────────────────────
 
+    public function duracionTotal(): int
+    {
+        return $this->servicios->sum('duracion_min');
+    }
+
+    public function precioTotalTexto(): string
+    {
+        $total = $this->servicios->sum('precio');
+        if ($total == 0 && $this->servicios->where('precio_variable', true)->count() > 0) {
+            return 'Precio variable';
+        }
+        return '$' . number_format($total, 2);
+    }
+
+    public function nombresServicios(): string
+    {
+        return $this->servicios->pluck('nombre')->join(', ');
+    }
+
     /**
      * Confirma la cita (el cliente respondió "sí" al recordatorio).
      */
@@ -107,17 +126,15 @@ class Cita extends Model
 
     /**
      * Texto resumen para mostrar en WhatsApp.
-     * Ej: "✅ Corte caballero — Lunes 9 de junio a las 3:00 PM — $150"
      */
     public function resumenWhatsApp(): string
     {
         $fecha   = Carbon::parse($this->fecha)->locale('es')->isoFormat('dddd D [de] MMMM');
         $hora    = Carbon::parse($this->hora_inicio)->format('g:i A');
-        $precio  = $this->servicio->precioTexto();
 
-        return "📅 *{$this->servicio->nombre}*\n"
+        return "📅 *{$this->nombresServicios()}*\n"
              . "📆 {$fecha} a las {$hora}\n"
-             . "💰 {$precio}";
+             . "💰 {$this->precioTotalTexto()}";
     }
 
     /**

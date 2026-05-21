@@ -23,6 +23,8 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::prefix('admin')->middleware(['auth', \App\Http\Middleware\CheckBarberiaActiva::class])->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/datos', [AdminDashboardController::class, 'datos'])->name('admin.datos');
+    Route::get('/citas-pendientes', [AdminDashboardController::class, 'citasPendientes'])->name('admin.citas.pendientes');
+    Route::post('/citas/{cita}/completar', [AdminDashboardController::class, 'completarCita'])->name('admin.citas.completar');
     Route::get('/reporte-pdf', [AdminDashboardController::class, 'exportarPdf'])->name('admin.reporte.pdf');
 });
 
