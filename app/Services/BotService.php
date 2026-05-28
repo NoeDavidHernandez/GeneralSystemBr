@@ -185,11 +185,6 @@ class BotService
         string $telefono, Barberia $barberia,
         Cliente $cliente, ConvEstado $estado
     ): void {
-        if (! $barberia->estaAbierta()) {
-            $this->responderFueraDeHorario($telefono, $barberia, $estado);
-            return;
-        }
-
         $nombre = $cliente->nombre !== 'Cliente' ? $cliente->nombre : '';
 
         if ($nombre) {
@@ -487,6 +482,29 @@ class BotService
             ->addMinutes($duracionTotal)
             ->format('H:i');
 
+        // ─── EVITAR RESERVAS DOBLES (Verificación de último segundo) ───
+        $slots = $this->disponibilidad->slotsDia(
+            $barberia,
+            $datos['fecha'],
+            $duracionTotal,
+            $datos['barbero_id'] ?? null
+        );
+
+        $slotSigueDisponible = $slots->contains(function ($s) use ($datos) {
+            return $s['hora'] === $datos['hora'] 
+                && ($datos['barbero_id'] ?? null) == $s['barbero_id'];
+        });
+
+        if (! $slotSigueDisponible) {
+            $estado->avanzar(ConvEstado::PASO_ESPERANDO_HORA);
+            $this->api->enviarTexto($telefono, $barberia,
+                "¡Uy! 😅 Alguien más acaba de ganar y reservar ese mismo horario justo mientras confirmabas.\n\n"
+            );
+            $this->enviarSlotsHorarios($telefono, $barberia, $slots);
+            return;
+        }
+        // ───────────────────────────────────────────────────────────────
+
         $cita = Cita::create([
             'barberia_id' => $barberia->id,
             'cliente_id'  => $cliente->id,
@@ -511,7 +529,8 @@ class BotService
             . "✂️ {$nombresServicios}\n\n"
             . "Te enviaremos un recordatorio 24 horas antes y 1 hora antes.\n\n"
             . "📍 {$barberia->direccion}\n\n"
-            . "¡Te esperamos! 💈"
+            . "¡Te esperamos! 💈\n\n"
+            . "_Para volver a hablar con el bot escribe hola._"
         );
 
         ProgramarRecordatorios::dispatch($cita);
