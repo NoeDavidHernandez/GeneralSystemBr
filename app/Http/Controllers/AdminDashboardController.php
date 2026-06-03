@@ -19,7 +19,11 @@ class AdminDashboardController extends Controller
 
     public function index()
     {
-        return view('admin.dashboard');
+        $barberiaId = Auth::user()->barberia_id;
+        $servicios = Servicio::where('barberia_id', $barberiaId)->where('activo', true)->get();
+        $barberos = Barbero::where('barberia_id', $barberiaId)->where('activo', true)->get();
+
+        return view('admin.dashboard', compact('servicios', 'barberos'));
     }
 
     // ─── API de datos para gráficas ───────────────────────────────────────
@@ -36,6 +40,7 @@ class AdminDashboardController extends Controller
             'kpis'               => $this->calcularKpis($fechaInicio, $fechaFin),
             'ingresos_por_dia'   => $this->ingresosPorDia($fechaInicio, $fechaFin),
             'servicios_populares'=> $this->serviciosPopulares($fechaInicio, $fechaFin),
+            'servicios_hoy'      => $this->serviciosHoy(),
             'estados_citas'      => $this->estadosCitas($fechaInicio, $fechaFin),
             'tendencia_citas'    => $this->tendenciaCitas($fechaInicio, $fechaFin, $periodo),
         ]);
@@ -68,6 +73,64 @@ class AdminDashboardController extends Controller
     }
 
     // ─── Exportar PDF ─────────────────────────────────────────────────────
+
+    public function registrarServicioLocal(Request $request)
+    {
+        $request->validate([
+            'servicios'      => 'required|array',
+            'barbero_id'     => 'nullable|exists:barberos,id',
+            'precio_cobrado' => 'required|numeric|min:0',
+            'telefono'       => 'nullable|string|max:20',
+            'nombre'         => 'nullable|string|max:100',
+        ]);
+
+        $barberiaId = Auth::user()->barberia_id;
+
+        // Determinar el cliente
+        if ($request->telefono) {
+            $cliente = Cliente::firstOrCreate(
+                ['telefono' => $request->telefono],
+                ['nombre' => $request->nombre ?? 'Cliente Local']
+            );
+        } else {
+            $cliente = Cliente::firstOrCreate(
+                ['telefono' => '0000000000'],
+                ['nombre' => $request->nombre ?? 'Cliente Mostrador']
+            );
+        }
+
+        $duracionTotal = (int) Servicio::whereIn('id', $request->servicios)->sum('duracion_min');
+        $horaInicio = now()->format('H:i:s');
+        $horaFin = now()->addMinutes($duracionTotal)->format('H:i:s');
+
+        $cita = Cita::create([
+            'barberia_id'    => $barberiaId,
+            'cliente_id'     => $cliente->id,
+            'barbero_id'     => $request->barbero_id,
+            'fecha'          => now()->toDateString(),
+            'hora_inicio'    => $horaInicio,
+            'hora_fin'       => $horaFin,
+            'estado'         => 'completada',
+            'precio_cobrado' => $request->precio_cobrado,
+            'notas'          => 'Servicio registrado localmente',
+        ]);
+
+        $cita->servicios()->attach($request->servicios);
+        $cliente->increment('total_visitas');
+
+        // Disparar mensaje de WhatsApp para pedir calificación SOLO si el teléfono no es el genérico
+        if ($request->telefono && $request->telefono !== '0000000000') {
+            try {
+                $botService = app(\App\Services\BotService::class);
+                $botService->pedirCalificacion($cita);
+            } catch (\Exception $e) {
+                // Ignore errors if WhatsApp fails so it doesn't break the UI
+                \Illuminate\Support\Facades\Log::error("Error pidiendo calificación local: " . $e->getMessage());
+            }
+        }
+
+        return response()->json(['success' => true]);
+    }
 
     public function completarCita(Request $request, Cita $cita)
     {
@@ -227,6 +290,29 @@ class AdminDashboardController extends Controller
         return [
             'labels' => $rows->pluck('nombre')->toArray(),
             'data'   => $rows->pluck('total')->toArray(),
+        ];
+    }
+
+    private function serviciosHoy(): array
+    {
+        $barberiaId = Auth::user()->barberia_id;
+        $hoy = now()->toDateString();
+
+        $rows = DB::table('cita_servicio')
+            ->join('citas', 'cita_servicio.cita_id', '=', 'citas.id')
+            ->join('servicios', 'cita_servicio.servicio_id', '=', 'servicios.id')
+            ->where('citas.barberia_id', $barberiaId)
+            ->where('citas.fecha', $hoy)
+            ->whereNotIn('citas.estado', ['cancelada', 'no_asistio'])
+            ->select('servicios.nombre', DB::raw('COUNT(*) as total'))
+            ->groupBy('servicios.id', 'servicios.nombre')
+            ->orderByDesc('total')
+            ->get();
+
+        return [
+            'labels' => $rows->pluck('nombre')->toArray(),
+            'data'   => $rows->pluck('total')->toArray(),
+            'total'  => $rows->sum('total')
         ];
     }
 

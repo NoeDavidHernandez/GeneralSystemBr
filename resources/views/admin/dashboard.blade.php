@@ -6,7 +6,8 @@
     <title>Panel de Administración — Barbería</title>
     <meta name="description" content="Panel de administración para tu barbería. Citas pendientes, ingresos y estadísticas.">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js" defer></script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -134,11 +135,11 @@
 
         /* Charts */
         .charts-section-title { font-size: 1rem; font-weight: 700; margin-bottom: 16px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.75rem; }
-        .charts-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .charts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
         .chart-card { background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 16px; padding: 24px; backdrop-filter: blur(20px); box-shadow: var(--card-shadow); animation: fadeUp 0.6s ease forwards; opacity: 0; transition: all 0.3s ease; }
         .chart-card:hover { box-shadow: var(--card-hover-shadow); }
-        .chart-card:nth-child(1){animation-delay:.1s} .chart-card:nth-child(2){animation-delay:.15s} .chart-card:nth-child(3){animation-delay:.2s}
-        .chart-card.wide { grid-column: span 2; }
+        .chart-card:nth-child(1){animation-delay:.1s} .chart-card:nth-child(2){animation-delay:.15s} .chart-card:nth-child(3){animation-delay:.2s} .chart-card:nth-child(4){animation-delay:.25s}
+        .chart-card.wide { grid-column: span 3; }
         .chart-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
         .chart-container { position: relative; width: 100%; height: 260px; }
 
@@ -146,6 +147,23 @@
 
         @media(max-width:900px){ .charts-grid{grid-template-columns:1fr} .chart-card.wide{grid-column:span 1} }
         @media(max-width:600px){ .kpis{grid-template-columns:repeat(2,1fr)} .header{text-align:center;justify-content:center} }
+
+        .icon-inline { width: 1.2em; height: 1.2em; vertical-align: middle; }
+        
+        /* Modal Nuevo Servicio Local */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 100; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; }
+        .modal-overlay.active { display: flex; opacity: 1; }
+        .modal { background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 20px; width: 90%; max-width: 500px; padding: 24px; box-shadow: var(--card-hover-shadow); transform: scale(0.95); transition: transform 0.3s ease; max-height: 90vh; overflow-y: auto; }
+        .modal-overlay.active .modal { transform: scale(1); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-title { font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .modal-close { background: none; border: none; font-size: 1.5rem; color: var(--text-secondary); cursor: pointer; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary); }
+        .form-control { width: 100%; padding: 10px 14px; border: 1px solid var(--border-card); border-radius: 10px; background: var(--bg-primary); color: var(--text-primary); font-family: inherit; font-size: 0.9rem; transition: border-color 0.3s ease; }
+        .form-control:focus { outline: none; border-color: var(--accent); }
+        .checkbox-group { display: flex; flex-direction: column; gap: 8px; max-height: 150px; overflow-y: auto; padding: 10px; border: 1px solid var(--border-card); border-radius: 10px; background: var(--bg-primary); }
+        .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -153,7 +171,7 @@
         <!-- Header -->
         <header class="header">
             <div class="header-left">
-                <h1>💈 Panel de Administración</h1>
+                <h1><i data-lucide='scissors' class='icon-inline'></i> Panel de Administración</h1>
                 <p id="periodo-label">Cargando estadísticas...</p>
             </div>
             <div class="header-actions">
@@ -161,28 +179,29 @@
                     <strong>{{ Auth::user()->barberia->nombre ?? 'Sin Barbería' }}</strong>
                     {{ Auth::user()->name }}
                 </div>
-                <button class="theme-toggle" id="theme-toggle" title="Cambiar tema" onclick="toggleTheme()">🌙</button>
-                <a href="#" id="btn-pdf" class="btn btn-primary" onclick="descargarPdf(event)">📄 Reporte PDF</a>
+                <button class="btn btn-primary" onclick="abrirModalLocal()"><i data-lucide="plus" class="icon-inline"></i> Nuevo Servicio</button>
+                <button class="theme-toggle" id="theme-toggle" title="Cambiar tema" onclick="toggleTheme()"><i data-lucide="moon"></i></button>
+                <a href="#" id="btn-pdf" class="btn btn-primary" onclick="descargarPdf(event)"><i data-lucide='file-text' class='icon-inline'></i> Reporte PDF</a>
                 <form method="POST" action="{{ route('logout') }}" style="display:inline;">
                     @csrf
-                    <button type="submit" class="btn btn-danger">🚪 Salir</button>
+                    <button type="submit" class="btn btn-danger"><i data-lucide='log-out' class='icon-inline'></i> Salir</button>
                 </form>
             </div>
         </header>
 
         <!-- KPIs -->
         <div class="kpis" id="kpis">
-            <div class="kpi-card gold"><div class="kpi-icon">💰</div><div class="kpi-value" id="kpi-ingresos">--</div><div class="kpi-label">Ingresos</div></div>
-            <div class="kpi-card blue"><div class="kpi-icon">📅</div><div class="kpi-value" id="kpi-citas">--</div><div class="kpi-label">Total Citas</div></div>
-            <div class="kpi-card green"><div class="kpi-icon">✅</div><div class="kpi-value" id="kpi-completadas">--</div><div class="kpi-label">Completadas</div></div>
-            <div class="kpi-card purple"><div class="kpi-icon">👤</div><div class="kpi-value" id="kpi-clientes">--</div><div class="kpi-label">Clientes Nuevos</div></div>
-            <div class="kpi-card red"><div class="kpi-icon">📉</div><div class="kpi-value" id="kpi-cancelacion">--</div><div class="kpi-label">Tasa Cancelación</div></div>
+            <div class="kpi-card gold"><div class="kpi-icon"><i data-lucide='dollar-sign'></i></div><div class="kpi-value" id="kpi-ingresos">--</div><div class="kpi-label">Ingresos</div></div>
+            <div class="kpi-card blue"><div class="kpi-icon"><i data-lucide='calendar'></i></div><div class="kpi-value" id="kpi-citas">--</div><div class="kpi-label">Total Citas</div></div>
+            <div class="kpi-card green"><div class="kpi-icon"><i data-lucide='check-circle'></i></div><div class="kpi-value" id="kpi-completadas">--</div><div class="kpi-label">Completadas</div></div>
+            <div class="kpi-card purple"><div class="kpi-icon"><i data-lucide='users'></i></div><div class="kpi-value" id="kpi-clientes">--</div><div class="kpi-label">Clientes Nuevos</div></div>
+            <div class="kpi-card red"><div class="kpi-icon"><i data-lucide='trending-down'></i></div><div class="kpi-value" id="kpi-cancelacion">--</div><div class="kpi-label">Tasa Cancelación</div></div>
         </div>
 
         <!-- ── CITAS PENDIENTES (LO PRIMERO Y MÁS IMPORTANTE) ────────── -->
         <div class="citas-panel">
             <div class="section-title">
-                🗓️ Citas Próximas
+                <i data-lucide='calendar-clock' class='icon-inline'></i> Citas Próximas
                 <span class="count-badge" id="citas-count">0</span>
                 <span style="font-size:0.8rem; font-weight:400; color:var(--text-secondary); margin-left:auto;">Actualizando automáticamente cada 60s</span>
             </div>
@@ -200,7 +219,7 @@
                         </tr>
                     </thead>
                     <tbody id="citas-tbody">
-                        <tr class="loading-row"><td colspan="6">⏳ Cargando citas...</td></tr>
+                        <tr class="loading-row"><td colspan="6"><i data-lucide='loader' class='icon-inline'></i> Cargando citas...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -217,17 +236,66 @@
 
         <div class="charts-grid">
             <div class="chart-card wide">
-                <div class="chart-title">📈 Ingresos por Día</div>
+                <div class="chart-title"><i data-lucide='trending-up' class='icon-inline'></i> Ingresos por Día</div>
                 <div class="chart-container"><canvas id="chart-ingresos"></canvas></div>
             </div>
             <div class="chart-card">
-                <div class="chart-title">✂️ Servicios Más Solicitados</div>
+                <div class="chart-title"><i data-lucide="scissors" class="icon-inline"></i> Top Servicios del Mes</div>
                 <div class="chart-container"><canvas id="chart-servicios"></canvas></div>
             </div>
             <div class="chart-card">
-                <div class="chart-title">📊 Estado de Citas</div>
+                <div class="chart-title"><i data-lucide="pie-chart" class="icon-inline"></i> Estado de Citas</div>
                 <div class="chart-container"><canvas id="chart-estados"></canvas></div>
             </div>
+            <div class="chart-card">
+                <div class="chart-title" style="color: var(--green);"><i data-lucide="calendar-check" class="icon-inline"></i> Servicios Hoy</div>
+                <div class="chart-container"><canvas id="chart-servicios-hoy"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nuevo Servicio Local -->
+    <div class="modal-overlay" id="modal-local">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title"><i data-lucide="plus-circle" class="icon-inline"></i> Registrar Venta Local</div>
+                <button class="modal-close" onclick="cerrarModalLocal()"><i data-lucide="x"></i></button>
+            </div>
+            <form id="form-local" onsubmit="guardarServicioLocal(event)">
+                <div class="form-group">
+                    <label class="form-label">Teléfono (Opcional)</label>
+                    <input type="text" id="local_telefono" class="form-control" placeholder="Ej: 5212223008628 (Para sumar puntos)">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nombre del Cliente (Opcional)</label>
+                    <input type="text" id="local_nombre" class="form-control" placeholder="Ej: Juan Pérez">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Servicios Realizados</label>
+                    <div class="checkbox-group">
+                        @foreach($servicios as $srv)
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="servicios[]" value="{{ $srv->id }}" data-precio="{{ $srv->precio }}" onchange="calcularPrecioLocal()">
+                            {{ $srv->nombre }} (${{ number_format($srv->precio, 2) }})
+                        </label>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Barbero</label>
+                    <select id="local_barbero_id" class="form-control" required>
+                        <option value="">Selecciona un barbero...</option>
+                        @foreach($barberos as $barb)
+                        <option value="{{ $barb->id }}">{{ $barb->nombre }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Precio Cobrado ($)</label>
+                    <input type="number" step="0.01" id="local_precio" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;"><i data-lucide="save" class="icon-inline"></i> Guardar Servicio</button>
+            </form>
         </div>
     </div>
 
@@ -240,7 +308,9 @@
     function toggleTheme() {
         isDark = !isDark;
         document.documentElement.setAttribute('data-theme', isDark ? 'dark' : '');
-        document.getElementById('theme-toggle').textContent = isDark ? '☀️' : '🌙';
+        const btn = document.getElementById('theme-toggle');
+        btn.innerHTML = isDark ? '<i data-lucide="sun"></i>' : '<i data-lucide="moon"></i>';
+        lucide.createIcons();
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
         applyChartTheme();
         cargarDatos(periodoActual);
@@ -249,7 +319,8 @@
         if (localStorage.getItem('theme') === 'dark') {
             isDark = true;
             document.documentElement.setAttribute('data-theme', 'dark');
-            document.getElementById('theme-toggle').textContent = '☀️';
+            const btn = document.getElementById('theme-toggle');
+            if (btn) btn.innerHTML = '<i data-lucide="sun"></i>';
         }
     }
     function applyChartTheme() {
@@ -276,6 +347,7 @@
         initFiltros();
         cargarCitasPendientes();
         cargarDatos(periodoActual);
+        lucide.createIcons();
         // Refrescar citas cada 60 segundos
         setInterval(cargarCitasPendientes, 60000);
     });
@@ -302,13 +374,14 @@
             if (citas.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="6">
+                        <td colspan="7">
                             <div class="empty-state">
-                                <span class="empty-icon">🎉</span>
+                                <span class="empty-icon"><i data-lucide="party-popper" style="width:3rem; height:3rem;"></i></span>
                                 <p>¡No hay citas pendientes por ahora!</p>
                             </div>
                         </td>
                     </tr>`;
+                lucide.createIcons();
                 return;
             }
 
@@ -322,14 +395,16 @@
                     <td>${escHtml(c.fecha)}</td>
                     <td><strong>${escHtml(c.hora)}</strong></td>
                     <td>${escHtml(c.barbero)}</td>
-                    <td><span class="badge badge-${c.estado}">${c.estado === 'pendiente' ? '⏳ Pendiente' : '✅ Confirmada'}</span></td>
+                    <td><span class="badge badge-${c.estado}">${c.estado === 'pendiente' ? '<i data-lucide="loader" class="icon-inline"></i> Pendiente' : '<i data-lucide="check-circle" class="icon-inline"></i> Confirmada'}</span></td>
                     <td>
-                        <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="completarCita(${c.id})">✔️ Cobrar</button>
+                        <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="completarCita(${c.id})"><i data-lucide="check" class="icon-inline"></i> Cobrar</button>
                     </td>
                 </tr>
             `).join('');
+            lucide.createIcons();
         } catch(e) {
-            document.getElementById('citas-tbody').innerHTML = `<tr class="loading-row"><td colspan="6">⚠️ Error al cargar citas. Recarga la página.</td></tr>`;
+            document.getElementById('citas-tbody').innerHTML = `<tr class="loading-row"><td colspan="7"><i data-lucide="alert-triangle" class="icon-inline"></i> Error al cargar citas. Recarga la página.</td></tr>`;
+            lucide.createIcons();
             console.error(e);
         }
     }
@@ -366,14 +441,78 @@
         document.getElementById('periodo-label').textContent = 'Actualizando estadísticas...';
         try {
             const res = await fetch(`/admin/datos?periodo=${periodo}`);
-            const data = await res.json();
-            actualizarKpis(data.kpis);
-            actualizarGraficas(data);
-            const t = {'1w':'Última semana','1m':'Último mes','3m':'Últimos 3 meses','6m':'Últimos 6 meses','1y':'Último año'};
-            document.getElementById('periodo-label').textContent = `${t[periodo]} — ${data.fecha_inicio} a ${data.fecha_fin}`;
+            const json = await res.json();
+            actualizarKpis(json.kpis);
+
+            // Actualizar gráficas
+            renderChart('chart-ingresos', 'line', json.ingresos_por_dia.labels, [{
+                label: 'Ingresos ($)', data: json.ingresos_por_dia.data, borderColor: getAccentColor(), backgroundColor: getAccentRgba(0.1), fill: true, tension: 0.4
+            }]);
+
+            renderChart('chart-servicios', 'doughnut', json.servicios_populares.labels, [{
+                data: json.servicios_populares.data,
+                backgroundColor: getPalette(),
+                borderWidth: 2, borderColor: getGridColor()
+            }]);
+
+            renderChart('chart-estados', 'pie', json.estados_citas.labels, [{
+                data: json.estados_citas.data,
+                backgroundColor: [C().green, C().red, C().gold, C().blue],
+                borderWidth: 2, borderColor: getGridColor()
+            }]);
+
+            // Gráfica de Servicios Hoy
+            if (json.servicios_hoy && json.servicios_hoy.labels && json.servicios_hoy.labels.length > 0) {
+                renderChart('chart-servicios-hoy', 'doughnut', json.servicios_hoy.labels, [{
+                    data: json.servicios_hoy.data,
+                    backgroundColor: [C().green, C().blue, C().cyan, C().purple, C().gold, C().orange, C().pink, C().red],
+                    borderWidth: 2, borderColor: getGridColor()
+                }], {
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `Total hoy: ${json.servicios_hoy.total} servicios`,
+                            color: isDark ? '#8888a0' : '#64748b'
+                        }
+                    }
+                });
+            } else {
+                const container = document.getElementById('chart-servicios-hoy');
+                if (container) {
+                    container.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-size:0.9rem;"><i data-lucide="coffee" style="margin-right:8px;"></i> Aún no hay servicios hoy</div>';
+                    if(typeof lucide !== 'undefined') lucide.createIcons();
+                }
+            }
+            
+            document.getElementById('periodo-label').textContent = `Mostrando datos de: ${json.fecha_inicio} a ${json.fecha_fin}`;
         } catch(e) {
             document.getElementById('periodo-label').textContent = 'Error al cargar estadísticas';
         }
+    }
+
+    function renderChart(id, type, labels, datasets, extraOptions = {}) {
+        const ctx = document.getElementById(id).getContext('2d');
+        if (charts[id]) charts[id].destroy();
+
+        const baseOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: type==='line'?'top':'right', labels:{color:isDark?'#8888a0':'#64748b', font:{family:'Inter'}} } }
+        };
+
+        if (type === 'line' || type === 'bar') {
+            baseOptions.scales = {
+                x: { grid: { color: getGridColor() } },
+                y: { grid: { color: getGridColor() }, beginAtZero: true }
+            };
+        }
+
+        const options = Object.assign({}, baseOptions, extraOptions);
+        if (extraOptions.plugins) {
+            options.plugins = { ...baseOptions.plugins, ...extraOptions.plugins };
+        }
+
+        charts[id] = new Chart(ctx, { type, data: { labels, datasets }, options });
     }
 
     function actualizarKpis(kpis) {
@@ -398,52 +537,79 @@
         requestAnimationFrame(update);
     }
 
-    function actualizarGraficas(data) {
-        crearGraficaIngresos(data.ingresos_por_dia);
-        crearGraficaServicios(data.servicios_populares);
-        crearGraficaEstados(data.estados_citas);
-    }
-
     function destruirChart(n) { if (charts[n]) { charts[n].destroy(); delete charts[n]; } }
-
-    function crearGraficaIngresos(d) {
-        destruirChart('ingresos');
-        const ctx = document.getElementById('chart-ingresos').getContext('2d');
-        const g = ctx.createLinearGradient(0, 0, 0, 260);
-        g.addColorStop(0, getAccentRgba(0.3));
-        g.addColorStop(1, getAccentRgba(0));
-        charts.ingresos = new Chart(ctx, {
-            type: 'line',
-            data: { labels: d.labels, datasets: [{ label: 'Ingresos ($)', data: d.data, borderColor: getAccentColor(), backgroundColor: g, fill: true, tension: 0.4, pointRadius: d.data.length > 30 ? 0 : 4, pointBackgroundColor: getAccentColor(), borderWidth: 2 }] },
-            options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,grid:{color:getGridColor()}},x:{grid:{display:false},ticks:{maxTicksLimit:12}}} }
-        });
-    }
-
-    function crearGraficaServicios(d) {
-        destruirChart('servicios');
-        if (!d.labels.length) return;
-        charts.servicios = new Chart(document.getElementById('chart-servicios'), {
-            type: 'doughnut',
-            data: { labels: d.labels, datasets: [{ data: d.data, backgroundColor: getPalette().slice(0, d.labels.length), borderWidth: 0, hoverOffset: 8 }] },
-            options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right',labels:{padding:12,font:{size:11}}}}, cutout:'60%' }
-        });
-    }
-
-    function crearGraficaEstados(d) {
-        destruirChart('estados');
-        if (!d.labels.length) return;
-        const c = C();
-        const cm = {'Pendiente':c.orange,'Confirmada':c.blue,'Completada':c.green,'Cancelada':c.red,'No asistió':c.purple};
-        charts.estados = new Chart(document.getElementById('chart-estados'), {
-            type: 'doughnut',
-            data: { labels: d.labels, datasets: [{ data: d.data, backgroundColor: d.labels.map(l => cm[l] || c.cyan), borderWidth: 0, hoverOffset: 8 }] },
-            options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right',labels:{padding:12,font:{size:11}}}}, cutout:'60%' }
-        });
-    }
 
     function descargarPdf(e) {
         e.preventDefault();
         window.location.href = `/admin/reporte-pdf?periodo=${periodoActual}`;
+    }
+    // ─── Nuevo Servicio Local ────────────────────────────────────
+    function abrirModalLocal() {
+        document.getElementById('form-local').reset();
+        document.getElementById('local_precio').value = '0.00';
+        document.getElementById('modal-local').classList.add('active');
+    }
+    function cerrarModalLocal() {
+        document.getElementById('modal-local').classList.remove('active');
+    }
+    function calcularPrecioLocal() {
+        const checkboxes = document.querySelectorAll('input[name="servicios[]"]:checked');
+        let total = 0;
+        checkboxes.forEach(cb => {
+            total += parseFloat(cb.dataset.precio || 0);
+        });
+        document.getElementById('local_precio').value = total.toFixed(2);
+    }
+    async function guardarServicioLocal(e) {
+        e.preventDefault();
+        const btn = e.target.querySelector('button[type="submit"]');
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = '<i data-lucide="loader" class="icon-inline"></i> Guardando...';
+        btn.disabled = true;
+        lucide.createIcons();
+
+        const checkboxes = document.querySelectorAll('input[name="servicios[]"]:checked');
+        const servicios = Array.from(checkboxes).map(cb => cb.value);
+
+        if (servicios.length === 0) {
+            alert('Debes seleccionar al menos un servicio.');
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+            lucide.createIcons();
+            return;
+        }
+
+        const data = {
+            telefono: document.getElementById('local_telefono').value.trim(),
+            nombre: document.getElementById('local_nombre').value.trim(),
+            servicios: servicios,
+            barbero_id: document.getElementById('local_barbero_id').value,
+            precio_cobrado: document.getElementById('local_precio').value,
+            _token: '{{ csrf_token() }}'
+        };
+
+        try {
+            const res = await fetch('{{ route("admin.citas.local") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            if (res.ok) {
+                cerrarModalLocal();
+                cargarCitasPendientes();
+                cargarDatos(periodoActual);
+            } else {
+                const err = await res.json();
+                alert(err.message || 'Error al guardar el servicio');
+            }
+        } catch (error) {
+            alert('Error de conexión');
+        } finally {
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+            lucide.createIcons();
+        }
     }
     </script>
 </body>

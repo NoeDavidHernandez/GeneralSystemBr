@@ -25,6 +25,7 @@ Route::prefix('admin')->middleware(['auth', \App\Http\Middleware\CheckBarberiaAc
     Route::get('/datos', [AdminDashboardController::class, 'datos'])->name('admin.datos');
     Route::get('/citas-pendientes', [AdminDashboardController::class, 'citasPendientes'])->name('admin.citas.pendientes');
     Route::post('/citas/{cita}/completar', [AdminDashboardController::class, 'completarCita'])->name('admin.citas.completar');
+    Route::post('/citas/local', [AdminDashboardController::class, 'registrarServicioLocal'])->name('admin.citas.local');
     Route::get('/reporte-pdf', [AdminDashboardController::class, 'exportarPdf'])->name('admin.reporte.pdf');
 });
 
