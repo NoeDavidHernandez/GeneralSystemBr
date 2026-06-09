@@ -8,6 +8,18 @@ use Carbon\Carbon;
 
 class Barberia extends Model
 {
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($barberia) {
+            if (!$barberia->fecha_proximo_pago) {
+                // Configura la fecha de pago a exactamente 1 mes después de su registro
+                $barberia->fecha_proximo_pago = now()->addMonth();
+            }
+        });
+    }
+
     protected $fillable = [
         'nombre',
         'direccion',
@@ -19,12 +31,14 @@ class Barberia extends Model
         'activo',
         'referido_por',
         'fecha_proximo_pago',
+        'recompensas_acumuladas',
     ];
 
     protected $casts = [
         'horario_json' => 'array',
         'activo'       => 'boolean',
         'fecha_proximo_pago' => 'date',
+        'recompensas_acumuladas' => 'integer',
     ];
 
     // ─── Relaciones ───────────────────────────────────────────────────────

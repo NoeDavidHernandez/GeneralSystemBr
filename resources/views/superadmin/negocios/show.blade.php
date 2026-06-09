@@ -44,7 +44,7 @@
 
         .form-group { margin-bottom: 20px; }
         .form-label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
-        .form-control { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-card); background: var(--bg-secondary); font-size: 0.95rem; font-family: 'Inter', sans-serif; }
+        .form-control { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-card); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.95rem; font-family: 'Inter', sans-serif; }
         .form-control:focus { outline: none; border-color: var(--accent); }
         
         .btn-submit { padding: 12px 24px; background: var(--accent-gradient); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: transform 0.2s; }
@@ -98,7 +98,7 @@
 
                 <div class="form-group">
                     <label class="form-label">¿Fue referido por otro negocio?</label>
-                    <select name="referido_por" class="form-control">
+                    <select name="referido_por" id="referidoPorSelect" class="form-control" onchange="toggleRecompensa()">
                         <option value="">Ninguno / Llegó solo</option>
                         @foreach($barberiasActivas as $otra)
                             <option value="{{ $otra->id }}" {{ $barberia->referido_por == $otra->id ? 'selected' : '' }}>
@@ -108,10 +108,75 @@
                     </select>
                 </div>
 
+                <div class="form-group" id="recompensaDiv" style="display: none; background: rgba(99, 102, 241, 0.05); padding: 16px; border-radius: 8px; border: 1px dashed var(--accent);">
+                    <label class="form-label" style="color: var(--accent);">Días gratis para el negocio que lo recomendó</label>
+                    <input type="number" name="dias_recompensa" class="form-control" min="0" max="30" value="15">
+                    <small style="color:var(--text-secondary); display:block; margin-top:6px;">Ingresa un valor (ej. 7 a 15). Se sumarán automáticamente a la fecha de pago del referenciador al guardar.</small>
+                </div>
+
                 <div style="text-align: right; margin-top: 32px;">
                     <button type="submit" class="btn-submit">Guardar Cambios</button>
                 </div>
             </form>
+        </div>
+
+        <div class="card" style="margin-top: 24px;">
+            <h3 style="margin-bottom: 20px; border-bottom: 1px solid var(--border-card); padding-bottom: 10px;">Registrar Pago (Suscripción SaaS)</h3>
+            <form action="{{ route('superadmin.negocios.pagos.store', $barberia->id) }}" method="POST">
+                @csrf
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                    <div class="form-group">
+                        <label class="form-label">Monto ($)</label>
+                        <input type="number" name="monto" class="form-control" step="0.01" required placeholder="Ej. 999.00">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fecha del Pago</label>
+                        <input type="date" name="fecha_pago" class="form-control" value="{{ date('Y-m-d') }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Método</label>
+                        <select name="metodo" class="form-control">
+                            <option value="Transferencia">Transferencia</option>
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Tarjeta">Tarjeta</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notas (Opcional)</label>
+                    <input type="text" name="notas" class="form-control" placeholder="Algún detalle adicional...">
+                </div>
+                <div style="text-align: right; margin-top: 16px;">
+                    <button type="submit" class="btn-submit" style="background-color: var(--green);">Registrar Pago</button>
+                </div>
+            </form>
+
+            <h4 style="margin-top: 40px; margin-bottom: 16px;">Historial de Pagos</h4>
+            @if(count($pagos) > 0)
+                <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--border-card);">
+                            <th style="padding: 12px 8px; color: var(--text-secondary); font-size: 0.85rem;">Fecha</th>
+                            <th style="padding: 12px 8px; color: var(--text-secondary); font-size: 0.85rem;">Monto</th>
+                            <th style="padding: 12px 8px; color: var(--text-secondary); font-size: 0.85rem;">Método</th>
+                            <th style="padding: 12px 8px; color: var(--text-secondary); font-size: 0.85rem;">Notas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($pagos as $p)
+                            <tr style="border-bottom: 1px solid var(--border-card);">
+                                <td style="padding: 12px 8px;">{{ $p->fecha_pago->format('d/m/Y') }}</td>
+                                <td style="padding: 12px 8px; font-weight: 500; color: var(--green);">${{ number_format($p->monto, 2) }}</td>
+                                <td style="padding: 12px 8px;">{{ $p->metodo }}</td>
+                                <td style="padding: 12px 8px; font-size: 0.85rem; color: var(--text-secondary);">{{ $p->notas }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @else
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">No hay pagos registrados aún.</p>
+            @endif
         </div>
     </div>
     <script>
@@ -128,6 +193,21 @@
                 localStorage.setItem('theme', 'dark');
             }
         }
+
+        // Mostrar caja de recompensa solo si se selecciona un referenciador diferente al actual
+        const selectElement = document.getElementById('referidoPorSelect');
+        const recompensaDiv = document.getElementById('recompensaDiv');
+        const originalReferidoVal = selectElement.value;
+
+        function toggleRecompensa() {
+            if (selectElement.value && selectElement.value !== originalReferidoVal) {
+                recompensaDiv.style.display = 'block';
+            } else {
+                recompensaDiv.style.display = 'none';
+            }
+        }
+        // Inicializar
+        toggleRecompensa();
     </script>
 </body>
 </html>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Barberia;
 use App\Models\User;
 use App\Models\Cita;
+use App\Models\PagoSaaS;
 use Illuminate\Http\Request;
 
 class SuperAdminController extends Controller
@@ -32,13 +33,20 @@ class SuperAdminController extends Controller
         // Lista de todas las barberías
         $barberias = Barberia::with('referenciador')->orderBy('created_at', 'desc')->get();
 
+        // Próximos Pagos (SaaS)
+        $proximosPagos = Barberia::whereNotNull('fecha_proximo_pago')
+            ->orderBy('fecha_proximo_pago', 'asc')
+            ->take(5)
+            ->get();
+
         return view('superadmin.dashboard', compact(
             'totalBarberias', 
             'barberiasActivas', 
             'totalUsuarios', 
             'citasHoy', 
             'ingresosGlobales',
-            'barberias'
+            'barberias',
+            'proximosPagos'
         ));
     }
 
@@ -94,7 +102,8 @@ class SuperAdminController extends Controller
                 'completadas' => $citasCompletadas,
                 'canceladas' => $citasCanceladas
             ],
-            'crecimiento' => $this->getCrecimientoSaaS($rango)
+            'crecimiento' => $this->getCrecimientoSaaS($rango),
+            'ingresosNLogic' => $this->getIngresosNLogic($rango)
         ]);
     }
 
@@ -118,6 +127,28 @@ class SuperAdminController extends Controller
         return [
             'labels' => $meses,
             'data' => $altas
+        ];
+    }
+
+    private function getIngresosNLogic($rango)
+    {
+        $meses = [];
+        $ingresos = [];
+
+        for ($i = $rango - 1; $i >= 0; $i--) {
+            $mes = now()->subMonths($i);
+            $meses[] = $mes->format('M Y');
+            
+            $suma = PagoSaaS::whereYear('fecha_pago', $mes->year)
+                ->whereMonth('fecha_pago', $mes->month)
+                ->sum('monto');
+                
+            $ingresos[] = $suma;
+        }
+
+        return [
+            'labels' => $meses,
+            'data' => $ingresos
         ];
     }
 }

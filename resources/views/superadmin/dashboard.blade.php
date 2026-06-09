@@ -66,6 +66,10 @@
         .btn-outline { background: transparent; border: 1px solid var(--border-card); color: var(--text-primary); }
         .btn-logout { background: #ef4444; color: white; }
         .btn-logout:hover { background: #dc2626; }
+        
+        .btn-filter { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-card); background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+        .btn-filter:hover { background: rgba(99, 102, 241, 0.1); color: var(--accent); }
+        .btn-filter.active { background: var(--accent); color: white; border-color: var(--accent); }
 
         /* KPIs */
         .kpis {
@@ -170,24 +174,63 @@
         <div class="charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 32px;">
             <div class="table-container" style="padding: 20px; grid-column: 1 / -1;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                    <h3 style="font-size: 1rem; color: var(--text-secondary); margin:0;">Crecimiento NLogic (Nuevas Barberías)</h3>
-                    <select id="rangoCrecimiento" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border-card); background:var(--bg-secondary); color:var(--text-primary); font-size:0.85rem; font-weight:500; cursor:pointer; outline:none;">
-                        <option value="1">1 Mes</option>
-                        <option value="3">3 Meses</option>
-                        <option value="6" selected>6 Meses</option>
-                        <option value="12">1 Año</option>
-                    </select>
+                    <h3 style="font-size: 1rem; color: var(--text-secondary); margin:0;">Métricas NLogic SaaS</h3>
+                    <div class="filter-buttons" style="display: flex; gap: 8px;">
+                        <button class="btn-filter active" data-rango="1">1 Mes</button>
+                        <button class="btn-filter" data-rango="3">3 Meses</button>
+                        <button class="btn-filter" data-rango="6">6 Meses</button>
+                        <button class="btn-filter" data-rango="12">1 Año</button>
+                    </div>
                 </div>
-                <div style="position: relative; height: 250px; width: 100%;">
-                    <canvas id="crecimientoChart"></canvas>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
+                    <div>
+                        <h4 style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; text-align: center;">Crecimiento (Nuevas Barberías)</h4>
+                        <div style="position: relative; height: 250px; width: 100%;">
+                            <canvas id="crecimientoChart"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; text-align: center;">Ingresos SaaS ($)</h4>
+                        <div style="position: relative; height: 250px; width: 100%;">
+                            <canvas id="ingresosNLogicChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="table-container" style="padding: 20px;">
-                <h3 style="margin-bottom: 16px; font-size: 1rem; color: var(--text-secondary);">Ingresos por Barbería</h3>
-                <div style="position: relative; height: 250px; width: 100%;">
-                    <canvas id="ingresosChart"></canvas>
+                <h3 style="margin-bottom: 16px; font-size: 1rem; color: var(--text-secondary);">Próximos Pagos (Suscripciones)</h3>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    @forelse($proximosPagos as $pago)
+                        @php
+                            $diasRestantes = now()->startOfDay()->diffInDays($pago->fecha_proximo_pago, false);
+                            $isVencido = $diasRestantes < 0;
+                            $color = $isVencido ? 'var(--red)' : ($diasRestantes <= 5 ? '#f59e0b' : 'var(--green)');
+                        @endphp
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-radius: 8px; background: var(--bg-secondary); border: 1px solid var(--border-card);">
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.9rem;">{{ $pago->nombre }}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">{{ $pago->fecha_proximo_pago->format('d M, Y') }}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-weight: 700; font-size: 0.9rem; color: {{ $color }};">
+                                    @if($isVencido)
+                                        Vencido (hace {{ abs((int)$diasRestantes) }} días)
+                                    @elseif($diasRestantes == 0)
+                                        ¡Hoy!
+                                    @else
+                                        En {{ (int)$diasRestantes }} días
+                                    @endif
+                                </div>
+                                <a href="{{ route('superadmin.negocios.show', $pago->id) }}" style="font-size: 0.75rem; color: var(--accent); text-decoration: none; display: inline-block; margin-top: 4px;">Cobrar →</a>
+                            </div>
+                        </div>
+                    @empty
+                        <div style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; padding: 20px;">No hay fechas registradas.</div>
+                    @endforelse
                 </div>
             </div>
+            
             <div class="table-container" style="padding: 20px;">
                 <h3 style="margin-bottom: 16px; font-size: 1rem; color: var(--text-secondary);">Volumen de Citas</h3>
                 <div style="position: relative; height: 250px; width: 100%;">
@@ -212,6 +255,7 @@
                         <th>ID</th>
                         <th>Barbería</th>
                         <th>Antigüedad</th>
+                        <th>Próximo Pago</th>
                         <th>Referido Por</th>
                         <th>Estado</th>
                         <th>Acción</th>
@@ -225,7 +269,19 @@
                             <strong>{{ $b->nombre }}</strong><br>
                             <span style="font-size:0.8rem; color:var(--text-secondary);">{{ $b->telefono ?? 'S/T' }}</span>
                         </td>
-                        <td>{{ number_format($b->created_at->floatDiffInMonths(now()), 1) }} meses</td>
+                        <td>{{ number_format($b->created_at->floatDiffInMonths(now()), 1) }} meses<br><span style="font-size:0.75rem; color:var(--text-secondary);">Llegó: {{ $b->created_at->format('d/m/y') }}</span></td>
+                        <td>
+                            @if($b->fecha_proximo_pago)
+                                <div style="font-weight: 500;">{{ $b->fecha_proximo_pago->format('d/m/Y') }}</div>
+                                @if($b->recompensas_acumuladas > 0)
+                                    <span style="display:inline-block; margin-top:4px; font-size:0.7rem; background:rgba(16,185,129,0.1); color:var(--green); padding:2px 6px; border-radius:4px; border:1px solid rgba(16,185,129,0.2);">
+                                        +{{ $b->recompensas_acumuladas }} días gratis
+                                    </span>
+                                @endif
+                            @else
+                                <span style="color:var(--text-secondary);">-</span>
+                            @endif
+                        </td>
                         <td>
                             @if($b->referenciador)
                                 <span style="font-size:0.85rem; color:var(--accent);">{{ $b->referenciador->nombre }}</span>
@@ -276,43 +332,36 @@
                 document.documentElement.setAttribute('data-theme', 'dark');
                 localStorage.setItem('theme', 'dark');
             }
-            // Recargar para que Chart.js actualice colores si se desea
             window.location.reload();
         }
 
         document.addEventListener('DOMContentLoaded', function() {
             let crecimientoChartInstance = null;
-            let ingresosChartInstance = null;
+            let ingresosNLogicChartInstance = null;
             let citasChartInstance = null;
             let estadosChartInstance = null;
 
-            function loadData(rango = 6) {
-                fetch(`/superadmin/datos?rango=${rango}`)
-                    .then(response => response.json())
+            function renderCharts(rango) {
+                fetch(`{{ route('superadmin.datos') }}?rango=${rango}`)
+                    .then(r => r.json())
                     .then(data => {
-                        const colors = [
-                            'rgba(99, 102, 241, 0.8)', // Indigo
-                            'rgba(16, 185, 129, 0.8)', // Emerald
-                            'rgba(245, 158, 11, 0.8)', // Amber
-                            'rgba(239, 68, 68, 0.8)',  // Red
-                            'rgba(139, 92, 246, 0.8)'  // Violet
-                        ];
+                        const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
 
-                        // Gráfica de Crecimiento SaaS (Línea)
+                        if(crecimientoChartInstance) crecimientoChartInstance.destroy();
                         if(data.crecimiento) {
-                            if(crecimientoChartInstance) crecimientoChartInstance.destroy();
                             crecimientoChartInstance = new Chart(document.getElementById('crecimientoChart'), {
                                 type: 'line',
                                 data: {
-                                    labels: data.crecimiento.labels,
+                                    labels: data.crecimiento.labels.reverse(),
                                     datasets: [{
                                         label: 'Nuevas Barberías',
-                                        data: data.crecimiento.data,
-                                        borderColor: 'rgba(99, 102, 241, 1)',
+                                        data: data.crecimiento.data.reverse(),
+                                        borderColor: '#6366f1',
                                         backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                                        borderWidth: 3,
-                                        tension: 0.4,
+                                        borderWidth: 2,
                                         fill: true,
+                                        tension: 0.4,
+                                        pointRadius: 4,
                                         pointBackgroundColor: 'rgba(99, 102, 241, 1)',
                                     }]
                                 },
@@ -328,71 +377,63 @@
                             });
                         }
 
-                    // Gráfica de Ingresos (Barras)
-                    if(ingresosChartInstance) ingresosChartInstance.destroy();
-                    ingresosChartInstance = new Chart(document.getElementById('ingresosChart'), {
-                        type: 'bar',
-                        data: {
-                            labels: data.labels,
-                            datasets: [{
-                                label: 'Ingresos Totales ($)',
-                                data: data.ingresos,
-                                backgroundColor: colors,
-                                borderRadius: 8
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
-                            scales: {
-                                y: { beginAtZero: true, grid: { color: 'rgba(148,163,184,0.1)' } },
-                                x: { grid: { display: false } }
-                            }
+                        if(ingresosNLogicChartInstance) ingresosNLogicChartInstance.destroy();
+                        if(data.ingresosNLogic) {
+                            ingresosNLogicChartInstance = new Chart(document.getElementById('ingresosNLogicChart'), {
+                                type: 'line',
+                                data: {
+                                    labels: data.ingresosNLogic.labels.reverse(),
+                                    datasets: [{
+                                        label: 'Ingresos ($)',
+                                        data: data.ingresosNLogic.data.reverse(),
+                                        borderColor: '#10b981',
+                                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                        borderWidth: 2,
+                                        fill: true,
+                                        tension: 0.4,
+                                        pointRadius: 4,
+                                        pointBackgroundColor: 'rgba(16, 185, 129, 1)',
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: { legend: { display: false } },
+                                    scales: {
+                                        y: { beginAtZero: true, grid: { color: 'rgba(148,163,184,0.1)' } },
+                                        x: { grid: { display: false } }
+                                    }
+                                }
+                            });
                         }
-                    });
 
-                    // Gráfica de Volumen de Citas (Doughnut)
-                    if(citasChartInstance) citasChartInstance.destroy();
-                    citasChartInstance = new Chart(document.getElementById('citasChart'), {
-                        type: 'doughnut',
-                        data: {
-                            labels: data.labels,
-                            datasets: [{
-                                data: data.totalCitas,
-                                backgroundColor: colors,
-                                borderWidth: 0
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            cutout: '70%',
-                            plugins: {
-                                legend: { position: 'bottom' }
+                        if(citasChartInstance) citasChartInstance.destroy();
+                        citasChartInstance = new Chart(document.getElementById('citasChart'), {
+                            type: 'doughnut',
+                            data: {
+                                labels: data.labels,
+                                datasets: [{
+                                    data: data.totalCitas,
+                                    backgroundColor: colors,
+                                    borderWidth: 0
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                cutout: '70%',
+                                plugins: { legend: { position: 'bottom' } }
                             }
-                        }
-                    });
+                        });
 
-                        // Gráfica de Estados (Barras Apiladas / Multiples)
                         if(estadosChartInstance) estadosChartInstance.destroy();
                         estadosChartInstance = new Chart(document.getElementById('estadosChart'), {
                             type: 'bar',
                             data: {
                                 labels: data.labels,
                                 datasets: [
-                                    {
-                                        label: 'Completadas',
-                                        data: data.estados.completadas,
-                                        backgroundColor: 'rgba(16, 185, 129, 0.8)', // Emerald
-                                        borderRadius: 4
-                                    },
-                                    {
-                                        label: 'Canceladas',
-                                        data: data.estados.canceladas,
-                                        backgroundColor: 'rgba(239, 68, 68, 0.8)', // Red
-                                        borderRadius: 4
-                                    }
+                                    { label: 'Completadas', data: data.estados.completadas, backgroundColor: '#10b981', borderRadius: 4 },
+                                    { label: 'Canceladas', data: data.estados.canceladas, backgroundColor: '#ef4444', borderRadius: 4 }
                                 ]
                             },
                             options: {
@@ -407,14 +448,16 @@
                     });
             }
 
-            // Inicializar carga de datos con el valor actual del select
-            const selectRango = document.getElementById('rangoCrecimiento');
-            loadData(selectRango.value);
-
-            // Escuchar cambios en el selector para recargar solo los datos
-            selectRango.addEventListener('change', function() {
-                loadData(this.value);
+            const filterButtons = document.querySelectorAll('.btn-filter');
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    filterButtons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    renderCharts(this.getAttribute('data-rango'));
+                });
             });
+
+            renderCharts(6);
         });
     </script>
 </body>

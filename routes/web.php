@@ -69,6 +69,7 @@ Route::prefix('superadmin')->middleware(['auth', \App\Http\Middleware\CheckSuper
     // Negocios (CRUD avanzado SaaS)
     Route::get('/negocios/{barberia}', [\App\Http\Controllers\SuperAdminNegociosController::class, 'show'])->name('superadmin.negocios.show');
     Route::put('/negocios/{barberia}', [\App\Http\Controllers\SuperAdminNegociosController::class, 'update'])->name('superadmin.negocios.update');
+    Route::post('/negocios/{barberia}/pagos', [\App\Http\Controllers\SuperAdminNegociosController::class, 'storePago'])->name('superadmin.negocios.pagos.store');
 
     // Equipo NLogic
     Route::get('/team', [\App\Http\Controllers\NlogicTeamController::class, 'index'])->name('superadmin.team.index');
