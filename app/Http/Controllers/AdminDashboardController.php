@@ -50,8 +50,7 @@ class AdminDashboardController extends Controller
 
     public function citasPendientes(): JsonResponse
     {
-        $barberiaId = Auth::user()->barberia_id;
-        $citas = Cita::where('barberia_id', $barberiaId)
+        $citas = $this->getCitasBaseQuery()
             ->whereIn('estado', ['pendiente', 'confirmada'])
             ->whereDate('fecha', '>=', today())
             ->with(['cliente', 'servicios', 'barbero'])
@@ -208,10 +207,19 @@ class AdminDashboardController extends Controller
         };
     }
 
+    private function getCitasBaseQuery()
+    {
+        $query = Cita::where('barberia_id', Auth::user()->barberia_id);
+        if (Auth::user()->rol === 'empleado') {
+            $query->where('barbero_id', Auth::user()->barbero_id);
+        }
+        return $query;
+    }
+
     private function calcularKpis(Carbon $inicio, Carbon $fin): array
     {
         $barberiaId = Auth::user()->barberia_id;
-        $citas = Cita::where('barberia_id', $barberiaId)
+        $citas = $this->getCitasBaseQuery()
             ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()]);
 
         $totalCitas      = (clone $citas)->count();
@@ -220,7 +228,7 @@ class AdminDashboardController extends Controller
         $noAsistio       = (clone $citas)->where('estado', 'no_asistio')->count();
 
         // Ingresos: usar precio_cobrado si existe, sino la suma de los servicios de la cita
-        $ingresos = Cita::where('barberia_id', $barberiaId)
+        $ingresos = $this->getCitasBaseQuery()
             ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
             ->where('estado', 'completada')
             ->with('servicios')
@@ -250,8 +258,7 @@ class AdminDashboardController extends Controller
 
     private function ingresosPorDia(Carbon $inicio, Carbon $fin): array
     {
-        $barberiaId = Auth::user()->barberia_id;
-        $citas = Cita::where('barberia_id', $barberiaId)
+        $citas = $this->getCitasBaseQuery()
             ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
             ->where('estado', 'completada')
             ->with('servicios')
@@ -318,8 +325,7 @@ class AdminDashboardController extends Controller
 
     private function estadosCitas(Carbon $inicio, Carbon $fin): array
     {
-        $barberiaId = Auth::user()->barberia_id;
-        $estados = Cita::where('barberia_id', $barberiaId)
+        $estados = $this->getCitasBaseQuery()
             ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
             ->selectRaw('estado, COUNT(*) as total')
             ->groupBy('estado')

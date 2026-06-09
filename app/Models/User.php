@@ -23,6 +23,8 @@ class User extends Authenticatable
         'email',
         'password',
         'barberia_id',
+        'rol',
+        'barbero_id',
     ];
 
     /**
@@ -51,5 +53,10 @@ class User extends Authenticatable
     public function barberia(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Barberia::class);
+    }
+
+    public function barbero(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Barbero::class);
     }
 }

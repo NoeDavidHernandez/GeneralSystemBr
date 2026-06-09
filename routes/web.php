@@ -27,6 +27,25 @@ Route::prefix('admin')->middleware(['auth', \App\Http\Middleware\CheckBarberiaAc
     Route::post('/citas/{cita}/completar', [AdminDashboardController::class, 'completarCita'])->name('admin.citas.completar');
     Route::post('/citas/local', [AdminDashboardController::class, 'registrarServicioLocal'])->name('admin.citas.local');
     Route::get('/reporte-pdf', [AdminDashboardController::class, 'exportarPdf'])->name('admin.reporte.pdf');
+    
+    // Clientes
+    Route::get('/clientes', [\App\Http\Controllers\ClientesController::class, 'index'])->name('admin.clientes.index');
+    Route::post('/clientes', [\App\Http\Controllers\ClientesController::class, 'store'])->name('admin.clientes.store');
+    Route::put('/clientes/{cliente}', [\App\Http\Controllers\ClientesController::class, 'update'])->name('admin.clientes.update');
+    
+    // Agenda
+    Route::get('/agenda', [\App\Http\Controllers\AgendaController::class, 'index'])->name('admin.agenda');
+    Route::get('/agenda/eventos', [\App\Http\Controllers\AgendaController::class, 'eventos'])->name('admin.agenda.eventos');
+    Route::post('/agenda/guardar', [\App\Http\Controllers\AgendaController::class, 'guardarCita'])->name('admin.agenda.guardar');
+    // Empleados
+    Route::get('/empleados', [\App\Http\Controllers\EmpleadosController::class, 'index'])->name('admin.empleados.index');
+    Route::post('/empleados', [\App\Http\Controllers\EmpleadosController::class, 'store'])->name('admin.empleados.store');
+    Route::put('/empleados/{empleado}', [\App\Http\Controllers\EmpleadosController::class, 'update'])->name('admin.empleados.update');
+    Route::delete('/empleados/{empleado}', [\App\Http\Controllers\EmpleadosController::class, 'destroy'])->name('admin.empleados.destroy');
+    
+    // Configuracion
+    Route::get('/configuracion', [\App\Http\Controllers\ConfiguracionController::class, 'index'])->name('admin.configuracion.index');
+    Route::put('/configuracion', [\App\Http\Controllers\ConfiguracionController::class, 'update'])->name('admin.configuracion.update');
 });
 
 // ─── Panel de Super Administrador (SaaS) ──────────────────────────────
