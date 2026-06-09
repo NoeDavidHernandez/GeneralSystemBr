@@ -30,7 +30,7 @@ class SuperAdminController extends Controller
             });
 
         // Lista de todas las barberías
-        $barberias = Barberia::orderBy('created_at', 'desc')->get();
+        $barberias = Barberia::with('referenciador')->orderBy('created_at', 'desc')->get();
 
         return view('superadmin.dashboard', compact(
             'totalBarberias', 
@@ -55,8 +55,9 @@ class SuperAdminController extends Controller
         return redirect()->route('superadmin.dashboard')->with('success', "La barbería '{$barberia->nombre}' ha sido {$estado}.");
     }
 
-    public function datos()
+    public function datos(Request $request)
     {
+        $rango = $request->input('rango', 6); // por defecto 6 meses
         $barberias = Barberia::all();
         $labels = [];
         $ingresos = [];
@@ -92,7 +93,31 @@ class SuperAdminController extends Controller
             'estados' => [
                 'completadas' => $citasCompletadas,
                 'canceladas' => $citasCanceladas
-            ]
+            ],
+            'crecimiento' => $this->getCrecimientoSaaS($rango)
         ]);
+    }
+
+    private function getCrecimientoSaaS($rango)
+    {
+        $meses = [];
+        $altas = [];
+
+        // Aseguramos que empiece en 0 (mes actual) y retroceda $rango - 1
+        for ($i = $rango - 1; $i >= 0; $i--) {
+            $mes = now()->subMonths($i);
+            $meses[] = $mes->format('M Y');
+            
+            $count = Barberia::whereYear('created_at', $mes->year)
+                ->whereMonth('created_at', $mes->month)
+                ->count();
+                
+            $altas[] = $count;
+        }
+
+        return [
+            'labels' => $meses,
+            'data' => $altas
+        ];
     }
 }

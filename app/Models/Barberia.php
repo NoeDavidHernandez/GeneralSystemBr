@@ -17,11 +17,14 @@ class Barberia extends Model
         'whatsapp_admin_numero',
         'horario_json',
         'activo',
+        'referido_por',
+        'fecha_proximo_pago',
     ];
 
     protected $casts = [
         'horario_json' => 'array',
         'activo'       => 'boolean',
+        'fecha_proximo_pago' => 'date',
     ];
 
     // ─── Relaciones ───────────────────────────────────────────────────────
@@ -34,6 +37,16 @@ class Barberia extends Model
     public function servicios(): HasMany
     {
         return $this->hasMany(Servicio::class);
+    }
+
+    public function citas(): HasMany
+    {
+        return $this->hasMany(Cita::class);
+    }
+
+    public function referenciador()
+    {
+        return $this->belongsTo(Barberia::class, 'referido_por');
     }
 
     // ─── Horario ──────────────────────────────────────────────────────────

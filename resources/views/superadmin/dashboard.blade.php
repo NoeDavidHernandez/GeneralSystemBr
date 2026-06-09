@@ -139,6 +139,11 @@
             </div>
         </header>
 
+        <div style="display:flex; gap:16px; margin-bottom:24px; border-bottom:1px solid var(--border-card); padding-bottom:12px;">
+            <a href="{{ route('superadmin.dashboard') }}" style="color:var(--accent); font-weight:600; text-decoration:none; border-bottom:2px solid var(--accent); padding-bottom:12px; margin-bottom:-13px;">📊 Dashboard Global</a>
+            <a href="{{ route('superadmin.team.index') }}" style="color:var(--text-secondary); font-weight:500; text-decoration:none; padding-bottom:12px;">👥 Equipo NLogic</a>
+        </div>
+
         @if(session('success'))
             <div class="alert">{{ session('success') }}</div>
         @endif
@@ -163,17 +168,37 @@
         </div>
 
         <div class="charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 32px;">
+            <div class="table-container" style="padding: 20px; grid-column: 1 / -1;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h3 style="font-size: 1rem; color: var(--text-secondary); margin:0;">Crecimiento NLogic (Nuevas Barberías)</h3>
+                    <select id="rangoCrecimiento" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border-card); background:var(--bg-secondary); color:var(--text-primary); font-size:0.85rem; font-weight:500; cursor:pointer; outline:none;">
+                        <option value="1">1 Mes</option>
+                        <option value="3">3 Meses</option>
+                        <option value="6" selected>6 Meses</option>
+                        <option value="12">1 Año</option>
+                    </select>
+                </div>
+                <div style="position: relative; height: 250px; width: 100%;">
+                    <canvas id="crecimientoChart"></canvas>
+                </div>
+            </div>
             <div class="table-container" style="padding: 20px;">
                 <h3 style="margin-bottom: 16px; font-size: 1rem; color: var(--text-secondary);">Ingresos por Barbería</h3>
-                <canvas id="ingresosChart"></canvas>
+                <div style="position: relative; height: 250px; width: 100%;">
+                    <canvas id="ingresosChart"></canvas>
+                </div>
             </div>
             <div class="table-container" style="padding: 20px;">
                 <h3 style="margin-bottom: 16px; font-size: 1rem; color: var(--text-secondary);">Volumen de Citas</h3>
-                <canvas id="citasChart"></canvas>
+                <div style="position: relative; height: 250px; width: 100%;">
+                    <canvas id="citasChart"></canvas>
+                </div>
             </div>
             <div class="table-container" style="padding: 20px;">
                 <h3 style="margin-bottom: 16px; font-size: 1rem; color: var(--text-secondary);">Estado de Citas</h3>
-                <canvas id="estadosChart"></canvas>
+                <div style="position: relative; height: 250px; width: 100%;">
+                    <canvas id="estadosChart"></canvas>
+                </div>
             </div>
         </div>
 
@@ -186,8 +211,8 @@
                     <tr>
                         <th>ID</th>
                         <th>Barbería</th>
-                        <th>Teléfono</th>
-                        <th>Alta</th>
+                        <th>Antigüedad</th>
+                        <th>Referido Por</th>
                         <th>Estado</th>
                         <th>Acción</th>
                     </tr>
@@ -196,9 +221,18 @@
                     @foreach($barberias as $b)
                     <tr>
                         <td>#{{ $b->id }}</td>
-                        <td><strong>{{ $b->nombre }}</strong></td>
-                        <td>{{ $b->telefono ?? 'N/A' }}</td>
-                        <td>{{ $b->created_at->format('d M Y') }}</td>
+                        <td>
+                            <strong>{{ $b->nombre }}</strong><br>
+                            <span style="font-size:0.8rem; color:var(--text-secondary);">{{ $b->telefono ?? 'S/T' }}</span>
+                        </td>
+                        <td>{{ number_format($b->created_at->floatDiffInMonths(now()), 1) }} meses</td>
+                        <td>
+                            @if($b->referenciador)
+                                <span style="font-size:0.85rem; color:var(--accent);">{{ $b->referenciador->nombre }}</span>
+                            @else
+                                <span style="font-size:0.85rem; color:var(--text-secondary);">-</span>
+                            @endif
+                        </td>
                         <td>
                             @if($b->activo)
                                 <span class="status-badge status-active">Activa</span>
@@ -206,7 +240,9 @@
                                 <span class="status-badge status-inactive">Suspendida</span>
                             @endif
                         </td>
-                        <td>
+                        <td style="display:flex; gap:8px;">
+                            <a href="{{ route('superadmin.negocios.show', $b->id) }}" class="btn-toggle" style="background:var(--bg-secondary); color:var(--text-primary); text-decoration:none;">Administrar</a>
+                            
                             <form action="{{ route('superadmin.barberias.toggle', $b->id) }}" method="POST" onsubmit="return confirm('¿Seguro que quieres cambiar el estado de esta barbería?');">
                                 @csrf
                                 @if($b->activo)
@@ -226,29 +262,75 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        // Cargar tema guardado
+        if (localStorage.getItem('theme') === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+
         function toggleTheme() {
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            document.documentElement.setAttribute('data-theme', isDark ? '' : 'dark');
-            // Idealmente aquí se refrescarían los colores de las gráficas
+            if (isDark) {
+                document.documentElement.setAttribute('data-theme', '');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            }
+            // Recargar para que Chart.js actualice colores si se desea
+            window.location.reload();
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            fetch('/superadmin/datos')
-                .then(response => response.json())
-                .then(data => {
-                    // Colores premium
-                    const colors = [
-                        'rgba(99, 102, 241, 0.8)', // Indigo
-                        'rgba(16, 185, 129, 0.8)', // Emerald
-                        'rgba(245, 158, 11, 0.8)', // Amber
-                        'rgba(239, 68, 68, 0.8)',  // Red
-                        'rgba(139, 92, 246, 0.8)'  // Violet
-                    ];
+            let crecimientoChartInstance = null;
+            let ingresosChartInstance = null;
+            let citasChartInstance = null;
+            let estadosChartInstance = null;
 
-                    const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim();
+            function loadData(rango = 6) {
+                fetch(`/superadmin/datos?rango=${rango}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const colors = [
+                            'rgba(99, 102, 241, 0.8)', // Indigo
+                            'rgba(16, 185, 129, 0.8)', // Emerald
+                            'rgba(245, 158, 11, 0.8)', // Amber
+                            'rgba(239, 68, 68, 0.8)',  // Red
+                            'rgba(139, 92, 246, 0.8)'  // Violet
+                        ];
+
+                        // Gráfica de Crecimiento SaaS (Línea)
+                        if(data.crecimiento) {
+                            if(crecimientoChartInstance) crecimientoChartInstance.destroy();
+                            crecimientoChartInstance = new Chart(document.getElementById('crecimientoChart'), {
+                                type: 'line',
+                                data: {
+                                    labels: data.crecimiento.labels,
+                                    datasets: [{
+                                        label: 'Nuevas Barberías',
+                                        data: data.crecimiento.data,
+                                        borderColor: 'rgba(99, 102, 241, 1)',
+                                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                                        borderWidth: 3,
+                                        tension: 0.4,
+                                        fill: true,
+                                        pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: { legend: { display: false } },
+                                    scales: {
+                                        y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(148,163,184,0.1)' } },
+                                        x: { grid: { display: false } }
+                                    }
+                                }
+                            });
+                        }
 
                     // Gráfica de Ingresos (Barras)
-                    new Chart(document.getElementById('ingresosChart'), {
+                    if(ingresosChartInstance) ingresosChartInstance.destroy();
+                    ingresosChartInstance = new Chart(document.getElementById('ingresosChart'), {
                         type: 'bar',
                         data: {
                             labels: data.labels,
@@ -260,6 +342,8 @@
                             }]
                         },
                         options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
                             plugins: { legend: { display: false } },
                             scales: {
                                 y: { beginAtZero: true, grid: { color: 'rgba(148,163,184,0.1)' } },
@@ -269,7 +353,8 @@
                     });
 
                     // Gráfica de Volumen de Citas (Doughnut)
-                    new Chart(document.getElementById('citasChart'), {
+                    if(citasChartInstance) citasChartInstance.destroy();
+                    citasChartInstance = new Chart(document.getElementById('citasChart'), {
                         type: 'doughnut',
                         data: {
                             labels: data.labels,
@@ -280,6 +365,8 @@
                             }]
                         },
                         options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
                             cutout: '70%',
                             plugins: {
                                 legend: { position: 'bottom' }
@@ -287,35 +374,47 @@
                         }
                     });
 
-                    // Gráfica de Estados (Barras Apiladas / Multiples)
-                    new Chart(document.getElementById('estadosChart'), {
-                        type: 'bar',
-                        data: {
-                            labels: data.labels,
-                            datasets: [
-                                {
-                                    label: 'Completadas',
-                                    data: data.estados.completadas,
-                                    backgroundColor: 'rgba(16, 185, 129, 0.8)', // Emerald
-                                    borderRadius: 4
-                                },
-                                {
-                                    label: 'Canceladas',
-                                    data: data.estados.canceladas,
-                                    backgroundColor: 'rgba(239, 68, 68, 0.8)', // Red
-                                    borderRadius: 4
+                        // Gráfica de Estados (Barras Apiladas / Multiples)
+                        if(estadosChartInstance) estadosChartInstance.destroy();
+                        estadosChartInstance = new Chart(document.getElementById('estadosChart'), {
+                            type: 'bar',
+                            data: {
+                                labels: data.labels,
+                                datasets: [
+                                    {
+                                        label: 'Completadas',
+                                        data: data.estados.completadas,
+                                        backgroundColor: 'rgba(16, 185, 129, 0.8)', // Emerald
+                                        borderRadius: 4
+                                    },
+                                    {
+                                        label: 'Canceladas',
+                                        data: data.estados.canceladas,
+                                        backgroundColor: 'rgba(239, 68, 68, 0.8)', // Red
+                                        borderRadius: 4
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    x: { stacked: false, grid: { display: false } },
+                                    y: { stacked: false, beginAtZero: true, grid: { color: 'rgba(148,163,184,0.1)' } }
                                 }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            scales: {
-                                x: { stacked: false, grid: { display: false } },
-                                y: { stacked: false, beginAtZero: true, grid: { color: 'rgba(148,163,184,0.1)' } }
                             }
-                        }
+                        });
                     });
-                });
+            }
+
+            // Inicializar carga de datos con el valor actual del select
+            const selectRango = document.getElementById('rangoCrecimiento');
+            loadData(selectRango.value);
+
+            // Escuchar cambios en el selector para recargar solo los datos
+            selectRango.addEventListener('change', function() {
+                loadData(this.value);
+            });
         });
     </script>
 </body>

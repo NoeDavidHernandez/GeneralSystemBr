@@ -65,4 +65,13 @@ Route::prefix('superadmin')->middleware(['auth', \App\Http\Middleware\CheckSuper
     Route::get('/', [SuperAdminController::class, 'index'])->name('superadmin.dashboard');
     Route::get('/datos', [SuperAdminController::class, 'datos'])->name('superadmin.datos');
     Route::post('/barberias/{id}/toggle', [SuperAdminController::class, 'toggleStatus'])->name('superadmin.barberias.toggle');
+
+    // Negocios (CRUD avanzado SaaS)
+    Route::get('/negocios/{barberia}', [\App\Http\Controllers\SuperAdminNegociosController::class, 'show'])->name('superadmin.negocios.show');
+    Route::put('/negocios/{barberia}', [\App\Http\Controllers\SuperAdminNegociosController::class, 'update'])->name('superadmin.negocios.update');
+
+    // Equipo NLogic
+    Route::get('/team', [\App\Http\Controllers\NlogicTeamController::class, 'index'])->name('superadmin.team.index');
+    Route::post('/team', [\App\Http\Controllers\NlogicTeamController::class, 'store'])->name('superadmin.team.store');
+    Route::delete('/team/{user}', [\App\Http\Controllers\NlogicTeamController::class, 'destroy'])->name('superadmin.team.destroy');
 });
