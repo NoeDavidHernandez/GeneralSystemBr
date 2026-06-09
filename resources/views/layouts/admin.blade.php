@@ -212,6 +212,9 @@
             <a href="{{ route('admin.clientes.index') }}" class="nav-item {{ request()->routeIs('admin.clientes.*') ? 'active' : '' }}">
                 <i data-lucide="users"></i> Clientes
             </a>
+            <a href="{{ route('admin.servicios.index') }}" class="nav-item {{ request()->routeIs('admin.servicios.*') ? 'active' : '' }}">
+                <i data-lucide="scissors"></i> Servicios
+            </a>
             @endif
             <a href="{{ route('admin.configuracion.index') }}" class="nav-item {{ request()->routeIs('admin.configuracion.*') ? 'active' : '' }}">
                 <i data-lucide="settings"></i> Configuración

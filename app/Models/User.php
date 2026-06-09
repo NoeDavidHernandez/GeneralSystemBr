@@ -23,8 +23,10 @@ class User extends Authenticatable
         'email',
         'password',
         'barberia_id',
+        'is_superadmin',
         'rol',
         'barbero_id',
+        'must_change_password',
     ];
 
     /**
@@ -47,6 +49,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_superadmin' => 'boolean',
+            'must_change_password' => 'boolean',
         ];
     }
 

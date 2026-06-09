@@ -19,8 +19,14 @@ Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+// ─── Rutas de Cambio de Contraseña Obligatorio ────────────────────────
+Route::middleware('auth')->group(function () {
+    Route::get('/password/setup', [\App\Http\Controllers\PasswordController::class, 'showSetPasswordForm'])->name('password.setup');
+    Route::post('/password/setup', [\App\Http\Controllers\PasswordController::class, 'updatePassword']);
+});
+
 // ─── Panel de Administración (Clientes) ───────────────────────────────
-Route::prefix('admin')->middleware(['auth', \App\Http\Middleware\CheckBarberiaActiva::class])->group(function () {
+Route::prefix('admin')->middleware(['auth', \App\Http\Middleware\CheckBarberiaActiva::class, 'force.password'])->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/datos', [AdminDashboardController::class, 'datos'])->name('admin.datos');
     Route::get('/citas-pendientes', [AdminDashboardController::class, 'citasPendientes'])->name('admin.citas.pendientes');
@@ -46,6 +52,12 @@ Route::prefix('admin')->middleware(['auth', \App\Http\Middleware\CheckBarberiaAc
     // Configuracion
     Route::get('/configuracion', [\App\Http\Controllers\ConfiguracionController::class, 'index'])->name('admin.configuracion.index');
     Route::put('/configuracion', [\App\Http\Controllers\ConfiguracionController::class, 'update'])->name('admin.configuracion.update');
+
+    // Servicios
+    Route::get('/servicios', [\App\Http\Controllers\ServiciosController::class, 'index'])->name('admin.servicios.index');
+    Route::post('/servicios', [\App\Http\Controllers\ServiciosController::class, 'store'])->name('admin.servicios.store');
+    Route::put('/servicios/{servicio}', [\App\Http\Controllers\ServiciosController::class, 'update'])->name('admin.servicios.update');
+    Route::delete('/servicios/{servicio}', [\App\Http\Controllers\ServiciosController::class, 'destroy'])->name('admin.servicios.destroy');
 });
 
 // ─── Panel de Super Administrador (SaaS) ──────────────────────────────
