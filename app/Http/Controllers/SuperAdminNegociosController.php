@@ -8,6 +8,41 @@ use Illuminate\Http\Request;
 
 class SuperAdminNegociosController extends Controller
 {
+    public function store(Request $request)
+    {
+        $request->validate([
+            'nombre' => 'required|string|max:255',
+            'telefono' => 'nullable|string|max:20',
+            'dias_prueba' => 'required|integer|in:7,14,15,21',
+            'email' => 'required|email|unique:users,email',
+            'whatsapp_phone_id' => 'required|string|max:60|unique:barberias,whatsapp_phone_id',
+            'whatsapp_token' => 'required|string',
+            'whatsapp_admin_numero' => 'required|string|max:20',
+        ]);
+
+        $barberia = Barberia::create([
+            'nombre' => $request->nombre,
+            'telefono' => $request->telefono,
+            'whatsapp_phone_id' => $request->whatsapp_phone_id,
+            'whatsapp_token' => $request->whatsapp_token,
+            'whatsapp_admin_numero' => $request->whatsapp_admin_numero,
+        ]);
+
+        // Configurar días de prueba directamente desde el request
+        $barberia->fecha_proximo_pago = now()->addDays((int) $request->dias_prueba);
+        $barberia->save();
+
+        // Crear el usuario administrador del negocio
+        \App\Models\User::create([
+            'name' => 'Admin ' . $request->nombre,
+            'email' => $request->email,
+            'password' => bcrypt('password123'), // Contraseña por defecto
+            'barberia_id' => $barberia->id,
+        ]);
+
+        return back()->with('success', 'Negocio registrado exitosamente con ' . $request->dias_prueba . ' días de prueba. El acceso es: ' . $request->email . ' / password123');
+    }
+
     public function show(Barberia $barberia)
     {
         $barberiasActivas = Barberia::where('id', '!=', $barberia->id)->orderBy('nombre')->get();
@@ -35,8 +70,8 @@ class SuperAdminNegociosController extends Controller
         if ($request->referido_por && $oldReferidoPor != $request->referido_por && $request->dias_recompensa > 0) {
             $referenciador = Barberia::find($request->referido_por);
             if ($referenciador && $referenciador->fecha_proximo_pago) {
-                $referenciador->fecha_proximo_pago = $referenciador->fecha_proximo_pago->addDays($request->dias_recompensa);
-                $referenciador->recompensas_acumuladas += $request->dias_recompensa;
+                $referenciador->fecha_proximo_pago = $referenciador->fecha_proximo_pago->addDays((int) $request->dias_recompensa);
+                $referenciador->recompensas_acumuladas += (int) $request->dias_recompensa;
                 $referenciador->save();
                 
                 $mensaje .= " Además, se han otorgado {$request->dias_recompensa} días gratis al negocio referenciador ({$referenciador->nombre}).";

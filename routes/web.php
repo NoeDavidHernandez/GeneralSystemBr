@@ -67,6 +67,7 @@ Route::prefix('superadmin')->middleware(['auth', \App\Http\Middleware\CheckSuper
     Route::post('/barberias/{id}/toggle', [SuperAdminController::class, 'toggleStatus'])->name('superadmin.barberias.toggle');
 
     // Negocios (CRUD avanzado SaaS)
+    Route::post('/negocios', [\App\Http\Controllers\SuperAdminNegociosController::class, 'store'])->name('superadmin.negocios.store');
     Route::get('/negocios/{barberia}', [\App\Http\Controllers\SuperAdminNegociosController::class, 'show'])->name('superadmin.negocios.show');
     Route::put('/negocios/{barberia}', [\App\Http\Controllers\SuperAdminNegociosController::class, 'update'])->name('superadmin.negocios.update');
     Route::post('/negocios/{barberia}/pagos', [\App\Http\Controllers\SuperAdminNegociosController::class, 'storePago'])->name('superadmin.negocios.pagos.store');

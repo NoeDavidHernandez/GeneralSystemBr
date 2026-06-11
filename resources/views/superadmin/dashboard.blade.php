@@ -246,8 +246,19 @@
         </div>
 
         <div class="table-container">
-            <div class="table-header">
+            @if($errors->any())
+                <div style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; padding: 15px; margin: 20px; color: var(--red);">
+                    <ul style="margin: 0; padding-left: 20px;">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <div class="table-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <h2>Directorio de Inquilinos</h2>
+                <button onclick="document.getElementById('modalNuevoNegocio').style.display='flex'" style="padding: 8px 16px; border-radius: 8px; border: none; background: var(--accent); color: white; cursor: pointer; font-weight: 600; font-size: 0.9rem;">+ Registrar Negocio</button>
             </div>
             <table>
                 <thead>
@@ -291,7 +302,11 @@
                         </td>
                         <td>
                             @if($b->activo)
-                                <span class="status-badge status-active">Activa</span>
+                                @if($b->enPrueba())
+                                    <span class="status-badge" style="background:rgba(245,158,11,0.1); color:#f59e0b; border:1px solid rgba(245,158,11,0.2);">Prueba 15D</span>
+                                @else
+                                    <span class="status-badge status-active">Activa</span>
+                                @endif
                             @else
                                 <span class="status-badge status-inactive">Suspendida</span>
                             @endif
@@ -460,5 +475,63 @@
             renderCharts(6);
         });
     </script>
+
+    <!-- Modal Nuevo Negocio -->
+    <div id="modalNuevoNegocio" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px);">
+        <div style="background: var(--bg-card); padding: 30px; border-radius: 16px; width: 90%; max-width: 500px; border: 1px solid var(--border-card); box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="color: var(--text-primary); font-size: 1.25rem;">Registrar Nuevo Negocio</h3>
+                <button onclick="document.getElementById('modalNuevoNegocio').style.display='none'" style="background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            
+            <form action="{{ route('superadmin.negocios.store') }}" method="POST">
+                @csrf
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 6px;">Nombre de la Barbería</label>
+                    <input type="text" name="nombre" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-card); background: var(--bg-secondary); color: var(--text-primary);">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 6px;">Teléfono WhatsApp</label>
+                    <input type="text" name="telefono" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-card); background: var(--bg-secondary); color: var(--text-primary);">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 6px;">Email del Administrador</label>
+                    <input type="email" name="email" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-card); background: var(--bg-secondary); color: var(--text-primary);">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 6px;">WhatsApp Phone ID (Meta)</label>
+                    <input type="text" name="whatsapp_phone_id" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-card); background: var(--bg-secondary); color: var(--text-primary);">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 6px;">WhatsApp Token (Meta)</label>
+                    <textarea name="whatsapp_token" required rows="2" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-card); background: var(--bg-secondary); color: var(--text-primary); resize: vertical;"></textarea>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 6px;">Número WhatsApp Admin (Alertas)</label>
+                    <input type="text" name="whatsapp_admin_numero" required placeholder="Ej: 521XXXXXXXXXX" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-card); background: var(--bg-secondary); color: var(--text-primary);">
+                </div>
+
+                <div style="margin-bottom: 25px;">
+                    <label style="display: block; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 6px;">Días de Prueba Iniciales</label>
+                    <select name="dias_prueba" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-card); background: var(--bg-secondary); color: var(--text-primary);">
+                        <option value="7">7 Días</option>
+                        <option value="14">14 Días</option>
+                        <option value="15" selected>15 Días</option>
+                        <option value="21">21 Días</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="document.getElementById('modalNuevoNegocio').style.display='none'" style="padding: 12px 20px; border-radius: 8px; border: 1px solid var(--border-card); background: var(--bg-secondary); color: var(--text-secondary); cursor: pointer;">Cancelar</button>
+                    <button type="submit" style="padding: 12px 20px; border-radius: 8px; border: none; background: var(--accent); color: white; font-weight: 600; cursor: pointer;">Registrar Negocio</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </body>
 </html>

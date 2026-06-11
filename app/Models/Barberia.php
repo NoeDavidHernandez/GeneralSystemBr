@@ -14,8 +14,8 @@ class Barberia extends Model
 
         static::creating(function ($barberia) {
             if (!$barberia->fecha_proximo_pago) {
-                // Configura la fecha de pago a exactamente 1 mes después de su registro
-                $barberia->fecha_proximo_pago = now()->addMonth();
+                // Configura la fecha de pago a exactamente 15 días después de su registro (Prueba)
+                $barberia->fecha_proximo_pago = now()->addDays(15);
             }
         });
     }
@@ -61,6 +61,16 @@ class Barberia extends Model
     public function referenciador()
     {
         return $this->belongsTo(Barberia::class, 'referido_por');
+    }
+
+    public function pagosSaaS(): HasMany
+    {
+        return $this->hasMany(PagoSaaS::class);
+    }
+
+    public function enPrueba(): bool
+    {
+        return $this->pagosSaaS()->count() === 0;
     }
 
     // ─── Horario ──────────────────────────────────────────────────────────
