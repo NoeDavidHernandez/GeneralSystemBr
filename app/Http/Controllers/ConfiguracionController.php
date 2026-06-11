@@ -50,6 +50,9 @@ class ConfiguracionController extends Controller
             'email' => 'nullable|email|max:100',
             'direccion' => 'nullable|string|max:200',
             'descripcion' => 'nullable|string',
+            'whatsapp_admin_numero' => 'nullable|string|max:50',
+            'whatsapp_phone_id' => 'nullable|string|max:100',
+            'whatsapp_token' => 'nullable|string',
             'apertura' => 'nullable|string',
             'cierre' => 'nullable|string',
             'comida_inicio' => 'nullable|string',
@@ -73,6 +76,9 @@ class ConfiguracionController extends Controller
             'email' => $request->email,
             'direccion' => $request->direccion,
             'descripcion' => $request->descripcion,
+            'whatsapp_admin_numero' => $request->whatsapp_admin_numero,
+            'whatsapp_phone_id' => $request->whatsapp_phone_id,
+            'whatsapp_token' => $request->whatsapp_token,
             'horario_json' => $horarioNuevo,
         ]);
 

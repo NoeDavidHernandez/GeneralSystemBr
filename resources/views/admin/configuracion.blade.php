@@ -118,6 +118,29 @@
                     <textarea name="descripcion" class="form-control" rows="3">{{ $barberia->descripcion }}</textarea>
                 </div>
             </div>
+
+            <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border-color);">
+                <h3 class="config-section-title" style="display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="message-circle" style="color: #25D366; width: 20px;"></i>
+                    Configuración de WhatsApp (Bot)
+                </h3>
+                <p class="config-section-desc">Vincula tu cuenta de WhatsApp Cloud API para que el asistente virtual pueda enviar mensajes y atender a tus clientes.</p>
+                
+                <div class="form-grid">
+                    <div class="form-group form-group-full">
+                        <label>Número Administrador (Con código de país, ej: 5215512345678)</label>
+                        <input type="text" name="whatsapp_admin_numero" class="form-control" value="{{ $barberia->whatsapp_admin_numero }}" placeholder="A este número llegarán las alertas urgentes del bot">
+                    </div>
+                    <div class="form-group">
+                        <label>ID del Teléfono (Phone ID)</label>
+                        <input type="text" name="whatsapp_phone_id" class="form-control" value="{{ $barberia->whatsapp_phone_id }}" placeholder="Ej: 1182259811628919">
+                    </div>
+                    <div class="form-group">
+                        <label>Token de Acceso (Access Token)</label>
+                        <input type="text" name="whatsapp_token" class="form-control" value="{{ $barberia->whatsapp_token }}" placeholder="Token permanente de Meta">
+                    </div>
+                </div>
+            </div>
             
             </div>
             @endif
