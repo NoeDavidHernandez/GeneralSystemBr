@@ -27,3 +27,6 @@ RUN composer install --no-interaction --optimize-autoloader
 # Exponer el puerto por defecto de Apache
 EXPOSE 80
 
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+CMD ["docker-entrypoint.sh"]
