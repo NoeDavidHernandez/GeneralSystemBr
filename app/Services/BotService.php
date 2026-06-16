@@ -28,7 +28,7 @@ class BotService
         ?string  $nombrePerfil = null,
     ): void {
         $estado  = ConvEstado::obtenerOCrear($telefono);
-        $cliente = Cliente::firstOrCreateByTelefono($telefono, $nombrePerfil ?? '');
+        $cliente = Cliente::firstOrCreateByTelefono($telefono, $nombrePerfil ?? '', $barberia);
 
         // ── Guardias ──────────────────────────────────────────────────────
 

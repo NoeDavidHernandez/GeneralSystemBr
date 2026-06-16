@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Cliente extends Model
 {
     protected $fillable = [
+        'barberia_id',
         'nombre',
         'telefono',
         'whatsapp_id',
@@ -33,15 +34,28 @@ class Cliente extends Model
         return $this->hasOne(ConvEstado::class, 'telefono', 'telefono');
     }
 
+    public function barberia()
+    {
+        return $this->belongsTo(Barberia::class);
+    }
+
 
     /**
      * Busca o crea un cliente por su número de teléfono.
      * Se llama en cada mensaje entrante del bot.
      */
-    public static function firstOrCreateByTelefono(string $telefono, string $nombre = ''): static
+    public static function firstOrCreateByTelefono(string $telefono, string $nombre = '', Barberia $barberia = null): static
     {
+        if (!$barberia) {
+            // Fallback just in case
+            return static::firstOrCreate(
+                ['telefono' => $telefono],
+                ['nombre'   => $nombre ?: 'Cliente']
+            );
+        }
+
         return static::firstOrCreate(
-            ['telefono' => $telefono],
+            ['telefono' => $telefono, 'barberia_id' => $barberia->id],
             ['nombre'   => $nombre ?: 'Cliente']
         );
     }
