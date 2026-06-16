@@ -29,4 +29,7 @@ EXPOSE 80
 
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# Arreglar problemas de fin de línea de Windows (CRLF a LF)
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh
+
 CMD ["docker-entrypoint.sh"]
