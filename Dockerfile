@@ -27,4 +27,3 @@ RUN composer install --no-interaction --optimize-autoloader
 # Exponer el puerto por defecto de Apache
 EXPOSE 80
 
-RUN php artisan migrate --force
