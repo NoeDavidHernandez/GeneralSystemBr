@@ -36,4 +36,9 @@ class Barbero extends Model
     {
         return $query->where('activo', true);
     }
+
+    public function user()
+    {
+        return $this->hasOne(User::class, 'barbero_id');
+    }
 }

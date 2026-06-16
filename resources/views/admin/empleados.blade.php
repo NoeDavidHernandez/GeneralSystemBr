@@ -15,7 +15,8 @@
         
         .emp-header { display: flex; align-items: center; gap: 16px; }
         .emp-avatar { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; flex-shrink: 0; }
-        .emp-info h3 { font-size: 1.2rem; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; }
+        .emp-info { flex: 1; min-width: 0; }
+        .emp-info h3 { font-size: 1.2rem; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .emp-info p { font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; }
         
         .emp-stats { display: flex; gap: 16px; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 16px 0; }
@@ -55,6 +56,16 @@
     </div>
 @endif
 
+@if($errors->any())
+    <div style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 16px; border-radius: 12px; margin-bottom: 24px; font-weight: 500;">
+        <ul style="margin: 0; padding-left: 20px;">
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
 <div class="empleados-grid">
     @foreach($empleados as $emp)
     <div class="empleado-card {{ !$emp->activo ? 'inactivo' : '' }}">
@@ -65,6 +76,12 @@
             <div class="emp-info">
                 <h3>{{ $emp->nombre }}</h3>
                 <p><i data-lucide="phone" style="width: 14px; height: 14px;"></i> {{ $emp->telefono ?: 'Sin teléfono' }}</p>
+                @if($emp->user)
+                <p style="margin-top: 4px; font-size: 0.8rem; background: var(--bg-primary); padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border-color); color: var(--text-secondary); max-width: 100%; box-sizing: border-box;">
+                    <i data-lucide="mail" style="width: 12px; height: 12px; flex-shrink: 0;"></i> 
+                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $emp->user->email }}</span>
+                </p>
+                @endif
                 @if(!$emp->activo) <span style="font-size: 0.7rem; background: var(--border-color); padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block;">INACTIVO</span> @endif
             </div>
         </div>
@@ -122,6 +139,18 @@
             </div>
             
             <div class="form-group">
+                <label class="form-label">Correo de Acceso *</label>
+                <input type="email" name="email" id="emp_email" class="form-control" required placeholder="correo@ejemplo.com">
+                <small style="color: var(--text-secondary); display: block; margin-top: 4px;">Este será el correo que usará para iniciar sesión.</small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Contraseña Inicial *</label>
+                <input type="text" name="password" id="emp_password" class="form-control">
+                <small style="color: var(--text-secondary); display: block; margin-top: 4px;">El administrador define la primera contraseña y se la pasa al especialista.</small>
+            </div>
+            
+            <div class="form-group">
                 <label class="form-label">Color para la Agenda *</label>
                 <input type="hidden" name="color_calendario" id="emp_color" value="#3b82f6" required>
                 <div class="color-picker" id="color-picker">
@@ -173,6 +202,10 @@
             
             document.getElementById('emp_nombre').value = empleado.nombre;
             document.getElementById('emp_telefono').value = empleado.telefono || '';
+            document.getElementById('emp_email').value = (empleado.user && empleado.user.email) ? empleado.user.email : '';
+            document.getElementById('emp_password').value = '';
+            document.getElementById('emp_password').required = false;
+            document.getElementById('emp_password').placeholder = 'Déjalo en blanco si no quieres cambiarla';
             seleccionarColor(empleado.color_calendario);
             
             groupActivo.style.display = 'block';
@@ -184,6 +217,10 @@
             
             document.getElementById('emp_nombre').value = '';
             document.getElementById('emp_telefono').value = '';
+            document.getElementById('emp_email').value = '';
+            document.getElementById('emp_password').value = '';
+            document.getElementById('emp_password').required = true;
+            document.getElementById('emp_password').placeholder = 'Mínimo 8 caracteres';
             seleccionarColor('#3b82f6');
             
             groupActivo.style.display = 'none';

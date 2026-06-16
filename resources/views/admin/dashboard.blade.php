@@ -135,7 +135,12 @@
     </div>
     <div class="chart-card">
         <div class="chart-title"><i data-lucide="calendar-check" style="color:var(--green);"></i> Servicios Hoy</div>
-        <div class="chart-container"><canvas id="chart-servicios-hoy"></canvas></div>
+        <div class="chart-container" id="container-servicios-hoy">
+            <canvas id="chart-servicios-hoy"></canvas>
+            <div id="empty-servicios-hoy" style="display:none; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--text-secondary); font-size:0.9rem;">
+                <i data-lucide="coffee" style="margin-bottom:8px; width:32px; height:32px; opacity:0.5;"></i> Aún no hay servicios hoy
+            </div>
+        </div>
     </div>
 </div>
 
@@ -145,8 +150,13 @@
         <div class="chart-container"><canvas id="chart-servicios"></canvas></div>
     </div>
     <div class="chart-card">
-        <div class="chart-title"><i data-lucide="pie-chart"></i> Estado de Citas</div>
-        <div class="chart-container"><canvas id="chart-estados"></canvas></div>
+        <div class="chart-title"><i data-lucide="dollar-sign" style="color:var(--gold);"></i> Ingresos Hoy (Por Especialista)</div>
+        <div class="chart-container" id="container-ingresos-hoy">
+            <canvas id="chart-ingresos-hoy"></canvas>
+            <div id="empty-ingresos-hoy" style="display:none; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--text-secondary); font-size:0.9rem;">
+                <i data-lucide="coffee" style="margin-bottom:8px; width:32px; height:32px; opacity:0.5;"></i> Aún no hay ingresos hoy
+            </div>
+        </div>
     </div>
 </div>
 @endif
@@ -317,13 +327,40 @@
                 borderWidth: 2, borderColor: darkBorder
             }], { cutout: '65%' });
 
-            renderChart('chart-estados', 'pie', json.estados_citas.labels, [{
-                data: json.estados_citas.data,
-                backgroundColor: [C().green, C().red, C().gold, C().blue],
-                borderWidth: 2, borderColor: darkBorder
-            }]);
+            if (json.ingresos_hoy && json.ingresos_hoy.labels && json.ingresos_hoy.labels.length > 0) {
+                document.getElementById('chart-ingresos-hoy').style.display = 'block';
+                document.getElementById('empty-ingresos-hoy').style.display = 'none';
+
+                renderChart('chart-ingresos-hoy', 'pie', json.ingresos_hoy.labels, [{
+                    data: json.ingresos_hoy.data,
+                    backgroundColor: [C().gold, C().blue, C().green, C().purple, C().orange, C().cyan],
+                    borderWidth: 2, borderColor: darkBorder
+                }], {
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return '  $' + Number(context.raw).toLocaleString('es-MX');
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: `Total hoy: $${Number(json.ingresos_hoy.total).toLocaleString('es-MX')}`,
+                            color: isDark ? '#94a3b8' : '#64748b'
+                        }
+                    }
+                });
+            } else {
+                document.getElementById('chart-ingresos-hoy').style.display = 'none';
+                document.getElementById('empty-ingresos-hoy').style.display = 'flex';
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
 
             if (json.servicios_hoy && json.servicios_hoy.labels && json.servicios_hoy.labels.length > 0) {
+                document.getElementById('chart-servicios-hoy').style.display = 'block';
+                document.getElementById('empty-servicios-hoy').style.display = 'none';
+                
                 renderChart('chart-servicios-hoy', 'doughnut', json.servicios_hoy.labels, [{
                     data: json.servicios_hoy.data,
                     backgroundColor: [C().green, C().blue, C().cyan, C().purple, C().gold, C().orange, C().pink, C().red],
@@ -339,11 +376,9 @@
                     }
                 });
             } else {
-                const canvas = document.getElementById('chart-servicios-hoy');
-                if (canvas) {
-                    canvas.parentElement.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-size:0.9rem;"><i data-lucide="coffee" style="margin-bottom:8px;width:32px;height:32px;opacity:0.5;"></i> Aún no hay servicios hoy</div>';
-                    if (typeof lucide !== 'undefined') lucide.createIcons();
-                }
+                document.getElementById('chart-servicios-hoy').style.display = 'none';
+                document.getElementById('empty-servicios-hoy').style.display = 'flex';
+                if (typeof lucide !== 'undefined') lucide.createIcons();
             }
 
             document.getElementById('periodo-label').textContent = `Mostrando datos de: ${json.fecha_inicio} a ${json.fecha_fin}`;

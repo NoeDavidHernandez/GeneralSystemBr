@@ -536,9 +536,9 @@ class BotService
         ProgramarRecordatorios::dispatch($cita);
 
         // Notificar al barbero o administrador
-        $barberoNumero = '5212213504917'; // Número base temporal indicado por el usuario
+        $barberoNumero = $barberia->whatsapp_admin_numero; // Por defecto avisa al administrador de la barbería
         if ($cita->barbero && $cita->barbero->telefono) {
-            $barberoNumero = $cita->barbero->telefono; // Usará el del barbero si existe en el futuro
+            $barberoNumero = preg_replace('/[^0-9]/', '', $cita->barbero->telefono); // Avisar directo al especialista
         }
 
         $barberoAsignado = $cita->barbero ? $cita->barbero->nombre : 'Cualquier barbero disponible';

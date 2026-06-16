@@ -41,7 +41,7 @@ class AdminDashboardController extends Controller
             'ingresos_por_dia'   => $this->ingresosPorDia($fechaInicio, $fechaFin),
             'servicios_populares'=> $this->serviciosPopulares($fechaInicio, $fechaFin),
             'servicios_hoy'      => $this->serviciosHoy(),
-            'estados_citas'      => $this->estadosCitas($fechaInicio, $fechaFin),
+            'ingresos_hoy'       => $this->ingresosHoyEspecialista(),
             'tendencia_citas'    => $this->tendenciaCitas($fechaInicio, $fechaFin, $periodo),
         ]);
     }
@@ -323,31 +323,31 @@ class AdminDashboardController extends Controller
         ];
     }
 
-    private function estadosCitas(Carbon $inicio, Carbon $fin): array
+    private function ingresosHoyEspecialista(): array
     {
-        $estados = $this->getCitasBaseQuery()
-            ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
-            ->selectRaw('estado, COUNT(*) as total')
-            ->groupBy('estado')
+        $citas = $this->getCitasBaseQuery()
+            ->whereDate('fecha', today())
+            ->where('estado', 'completada')
+            ->with(['barbero', 'servicios'])
             ->get();
 
-        $mapaLabels = [
-            'pendiente'  => 'Pendiente',
-            'confirmada' => 'Confirmada',
-            'cancelada'  => 'Cancelada',
-            'completada' => 'Completada',
-            'no_asistio' => 'No asistió',
-        ];
+        $ingresosPorBarbero = [];
 
-        $labels = [];
-        $data   = [];
-
-        foreach ($estados as $e) {
-            $labels[] = $mapaLabels[$e->estado] ?? $e->estado;
-            $data[]   = $e->total;
+        foreach ($citas as $cita) {
+            $barbero = $cita->barbero->nombre ?? 'Generales';
+            $ingreso = $cita->precio_cobrado ?? $cita->servicios->sum('precio');
+            
+            if (!isset($ingresosPorBarbero[$barbero])) {
+                $ingresosPorBarbero[$barbero] = 0;
+            }
+            $ingresosPorBarbero[$barbero] += $ingreso;
         }
 
-        return compact('labels', 'data');
+        return [
+            'labels' => array_keys($ingresosPorBarbero),
+            'data'   => array_values($ingresosPorBarbero),
+            'total'  => array_sum($ingresosPorBarbero)
+        ];
     }
 
     private function clientesNuevosVsRecurrentes(Carbon $inicio, Carbon $fin): array
