@@ -77,3 +77,13 @@ Route::prefix('superadmin')->middleware(['auth', \App\Http\Middleware\CheckSuper
     Route::post('/team', [\App\Http\Controllers\NlogicTeamController::class, 'store'])->name('superadmin.team.store');
     Route::delete('/team/{user}', [\App\Http\Controllers\NlogicTeamController::class, 'destroy'])->name('superadmin.team.destroy');
 });
+
+// ─── Ruta temporal para ejecutar migraciones sin consola (Render Free Tier) ───
+Route::get('/ejecutar-migraciones-secret-nlogic', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        return "¡Migraciones ejecutadas con éxito!<br><pre>" . \Illuminate\Support\Facades\Artisan::output() . "</pre>";
+    } catch (\Exception $e) {
+        return "Error ejecutando migraciones: " . $e->getMessage();
+    }
+});
