@@ -1,35 +1,14 @@
-FROM php:8.2-apache
+#!/bin/sh
 
-# Instalar extensiones de PHP necesarias y Composer
-RUN apt-get update && apt-get install -y \
-    unzip \
-    libzip-dev \
-    && docker-php-ext-install zip pdo pdo_mysql
+# Configurar Apache para escuchar en el puerto que Render asigna dinámicamente
+if [ -n "$PORT" ]; then
+    sed -i "s/80/$PORT/g" /etc/apache2/sites-available/000-default.conf /etc/apache2/ports.conf
+fi
 
-# Copiar Composer desde la imagen oficial
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Esperar un par de segundos a que todo esté listo e iniciar migraciones
+echo "Corriendo migraciones..."
+php artisan migrate --force
 
-# Copiar los archivos de tu proyecto al servidor
-COPY . /var/www/html/
-
-# Configurar Apache para Laravel
-ENV APACHE_DOCUMENT_ROOT /var/www/html/public
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
-RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
-RUN a2enmod rewrite
-
-# Dar permisos a la carpeta web
-RUN chown -R www-data:www-data /var/www/html
-
-# Ejecutar el comando que fallaba anteriormente
-RUN composer install --no-interaction --optimize-autoloader
-
-# Exponer el puerto por defecto de Apache
-EXPOSE 80
-
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-# Arreglar problemas de fin de línea de Windows (CRLF a LF)
-RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh
-
-CMD ["docker-entrypoint.sh"]
+# Iniciar el servidor Apache en primer plano (comando nativo de la imagen oficial)
+echo "Iniciando Apache..."
+exec apache2-foreground
