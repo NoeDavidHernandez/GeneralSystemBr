@@ -33,7 +33,7 @@ Route::prefix('whatsapp')->group(function () {
 // ─── Ruta temporal para ejecutar migraciones sin middleware de sesión ───
 Route::get('/ejecutar-migraciones-secret-nlogic', function () {
     try {
-        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        \Illuminate\Support\Facades\Artisan::call('migrate:fresh', ['--force' => true]);
         return "¡Migraciones ejecutadas con éxito desde API!<br><pre>" . \Illuminate\Support\Facades\Artisan::output() . "</pre>";
     } catch (\Exception $e) {
         return "Error ejecutando migraciones: " . $e->getMessage();
