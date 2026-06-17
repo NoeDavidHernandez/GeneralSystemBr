@@ -12,7 +12,6 @@ class DatabaseSeeder extends Seeder
         $this->call([
             BarberiaSeeder::class,  // primero barberias y barberos
             ServiciosSeeder::class, // luego servicios (necesitan barberia_id)
-            DatosPruebaSeeder::class, // Citas y clientes aleatorios
         ]);
     }
 }
