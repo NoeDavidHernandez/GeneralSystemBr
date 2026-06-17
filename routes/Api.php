@@ -39,3 +39,13 @@ Route::get('/ejecutar-migraciones-secret-nlogic', function () {
         return "Error ejecutando migraciones: " . $e->getMessage();
     }
 });
+
+// ─── Ruta temporal para insertar registros de prueba (Superadmin y Barberías) ───
+Route::get('/ejecutar-seeders-secret-nlogic', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+        return "¡Registros de prueba creados con éxito!<br><pre>" . \Illuminate\Support\Facades\Artisan::output() . "</pre>";
+    } catch (\Exception $e) {
+        return "Error insertando registros: " . $e->getMessage();
+    }
+});
