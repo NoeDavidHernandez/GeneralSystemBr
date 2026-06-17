@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE recordatorios_log MODIFY COLUMN tipo ENUM('24h_antes','1h_antes','30m_antes','solicitud_confirmacion','gracias','cancelacion') NOT NULL");
+        // Se movió la adición de '30m_antes' a la migración original para compatibilidad con PostgreSQL.
     }
 
     /**
@@ -19,6 +19,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE recordatorios_log MODIFY COLUMN tipo ENUM('24h_antes','1h_antes','solicitud_confirmacion','gracias','cancelacion') NOT NULL");
+        // No operation
     }
 };

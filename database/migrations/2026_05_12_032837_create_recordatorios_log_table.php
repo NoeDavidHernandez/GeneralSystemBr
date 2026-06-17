@@ -21,6 +21,7 @@ return new class extends Migration
             $table->enum('tipo', [
                 '24h_antes',            // recordatorio del día anterior
                 '1h_antes',             // recordatorio 1 hora antes
+                '30m_antes',            // recordatorio 30 minutos antes
                 'solicitud_confirmacion', // "¿confirmas tu cita?"
                 'gracias',              // mensaje post-servicio
                 'cancelacion',          // aviso de cita cancelada
