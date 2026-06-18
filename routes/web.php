@@ -7,11 +7,16 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SuperAdminController;
 
 Route::get('/', function () {
-    // Si está autenticado y es superadmin, mandarlo al superadmin
-    if (auth()->check() && auth()->user()->is_superadmin) {
-        return redirect()->route('superadmin.dashboard');
+    // Si está autenticado
+    if (auth()->check()) {
+        if (auth()->user()->is_superadmin) {
+            return redirect()->route('superadmin.dashboard');
+        }
+        return redirect()->route('admin.dashboard');
     }
-    return redirect()->route('admin.dashboard');
+    
+    // Si no está autenticado
+    return redirect()->route('login');
 });
 
 // ─── Autenticación ────────────────────────────────────────────────────
