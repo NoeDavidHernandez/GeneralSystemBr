@@ -19,6 +19,10 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
+// ─── Documentos Legales (Requeridos por Meta) ──────────────────────────
+Route::view('/politica-privacidad', 'legal.privacidad')->name('legal.privacidad');
+Route::view('/terminos-servicio', 'legal.terminos')->name('legal.terminos');
+
 // ─── Autenticación ────────────────────────────────────────────────────
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
