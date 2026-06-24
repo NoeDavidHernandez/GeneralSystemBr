@@ -218,5 +218,11 @@
         </form>
     </div>
 
+    <!-- Footer de Documentos Legales -->
+    <div style="position: absolute; bottom: 20px; width: 100%; text-align: center; z-index: 1;">
+        <a href="{{ route('legal.terminos') }}" style="color: var(--text-secondary); text-decoration: none; font-size: 0.85rem; margin: 0 10px;">Términos del Servicio</a>
+        <a href="{{ route('legal.privacidad') }}" style="color: var(--text-secondary); text-decoration: none; font-size: 0.85rem; margin: 0 10px;">Política de Privacidad</a>
+    </div>
+
 </body>
 </html>

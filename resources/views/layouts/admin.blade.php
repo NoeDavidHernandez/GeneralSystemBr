@@ -226,6 +226,10 @@
             @endif
         </nav>
         <div class="sidebar-footer">
+            <div style="padding: 0 16px 12px 16px; display: flex; flex-direction: column; gap: 8px;">
+                <a href="{{ route('legal.privacidad') }}" target="_blank" style="color: var(--text-secondary); font-size: 0.8rem; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-secondary)'"><i data-lucide="shield" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 4px;"></i> Privacidad</a>
+                <a href="{{ route('legal.terminos') }}" target="_blank" style="color: var(--text-secondary); font-size: 0.8rem; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-secondary)'"><i data-lucide="file-text" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 4px;"></i> Términos</a>
+            </div>
             <form action="{{ route('logout') }}" method="POST">
                 @csrf
                 <button type="submit" class="nav-item" style="width: 100%; border: none; background: transparent; cursor: pointer; text-align: left; padding: 12px 16px;">
