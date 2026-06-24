@@ -198,8 +198,18 @@
     <!-- SIDEBAR -->
     <aside class="sidebar">
         <div class="sidebar-header">
-            <div class="logo-icon"><i data-lucide="scissors"></i></div>
-            <h2>{{ Auth::user()->barberia->nombre ?? 'SaaS' }}</h2>
+            @php
+                $barberia = Auth::user()->barberia;
+                $logoUrl = $barberia->horario_json['logo'] ?? null;
+            @endphp
+            @if($logoUrl)
+                <div class="logo-icon" style="background: transparent; padding: 0;">
+                    <img src="{{ $logoUrl }}" style="width: 32px; height: 32px; border-radius: 8px; object-fit: cover;">
+                </div>
+            @else
+                <div class="logo-icon"><i data-lucide="scissors"></i></div>
+            @endif
+            <h2>{{ $barberia->nombre ?? 'SaaS' }}</h2>
         </div>
         <nav class="sidebar-nav">
             <a href="{{ route('admin.dashboard') }}" class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">

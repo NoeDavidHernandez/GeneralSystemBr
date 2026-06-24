@@ -80,7 +80,7 @@
 @section('content')
 <div class="page-header">
     <div class="page-title">
-        <h1>Buen día, {{ explode(' ', Auth::user()->name)[0] ?? 'Admin' }} ✨</h1>
+        <h1>Buen día, {{ explode(' ', Auth::user()->name)[0] ?? 'Admin' }} </h1>
         <p id="periodo-label">Resumen de actividad de {{ Auth::user()->barberia->nombre ?? 'tu negocio' }}</p>
     </div>
     <div class="page-actions" style="display:flex;gap:12px;">

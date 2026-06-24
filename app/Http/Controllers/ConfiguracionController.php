@@ -59,6 +59,8 @@ class ConfiguracionController extends Controller
             'comida_fin' => 'nullable|string',
             'dias_cerrado' => 'nullable|array',
             'password' => 'nullable|string|min:8|confirmed',
+            'logo_base64' => 'nullable|string',
+            'quitar_logo' => 'nullable|string|in:0,1',
         ]);
 
         $horarioActual = $barberia->horario_json ?? [];
@@ -69,6 +71,17 @@ class ConfiguracionController extends Controller
             'comida_fin' => $request->comida_fin ?? ($horarioActual['comida_fin'] ?? '15:00'),
             'dias_cerrado' => $request->dias_cerrado ? array_map('intval', $request->dias_cerrado) : [],
         ];
+
+        // Mantener el logo actual si existe
+        if (isset($horarioActual['logo'])) {
+            $horarioNuevo['logo'] = $horarioActual['logo'];
+        }
+
+        if ($request->quitar_logo == '1') {
+            unset($horarioNuevo['logo']);
+        } elseif ($request->filled('logo_base64')) {
+            $horarioNuevo['logo'] = $request->logo_base64;
+        }
 
         $barberia->update([
             'nombre' => $request->nombre,

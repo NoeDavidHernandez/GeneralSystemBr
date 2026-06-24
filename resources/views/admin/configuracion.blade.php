@@ -55,6 +55,16 @@
     </div>
 @endif
 
+@if($errors->any())
+    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #dc2626; padding: 16px; border-radius: 12px; margin-bottom: 24px;">
+        <ul style="margin: 0; padding-left: 20px;">
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
 <div class="config-container">
     <div class="config-sidebar">
         @if(Auth::user()->rol === 'admin')
@@ -78,16 +88,27 @@
                 <h2 class="config-section-title">Información del local</h2>
                 <p class="config-section-desc">Datos públicos que verán tus clientes en WhatsApp y la web</p>
             
+            @php 
+                $logoUrl = $barberia->horario_json['logo'] ?? null;
+            @endphp
             <div class="logo-upload-box">
-                <div class="logo-preview">
-                    <i data-lucide="scissors"></i>
+                <div class="logo-preview" id="logoPreviewContainer" style="overflow: hidden; {{ $logoUrl ? 'border:none;' : '' }}">
+                    @if($logoUrl)
+                        <img id="logoPreviewImg" src="{{ $logoUrl }}" style="width: 100%; height: 100%; object-fit: cover;">
+                    @else
+                        <img id="logoPreviewImg" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                        <i data-lucide="scissors" id="logoIconPlaceholder"></i>
+                    @endif
                 </div>
                 <div class="logo-actions">
                     <h3>Logo del local</h3>
-                    <p>PNG o JPG, mínimo 512x512px</p>
+                    <p>PNG o JPG, máximo 1MB</p>
                     <div class="logo-btns">
-                        <button type="button" class="btn-outline" style="padding: 6px 12px; font-size: 0.8rem;">Subir nuevo</button>
-                        <button type="button" class="btn-outline" style="padding: 6px 12px; font-size: 0.8rem; border-color: transparent; color: var(--red);">Quitar</button>
+                        <input type="file" id="logoFileInput" accept="image/png, image/jpeg, image/jpg" style="display: none;">
+                        <input type="hidden" name="logo_base64" id="logoBase64Input" value="">
+                        <input type="hidden" name="quitar_logo" id="quitarLogoInput" value="0">
+                        <button type="button" class="btn-outline" onclick="document.getElementById('logoFileInput').click()" style="padding: 6px 12px; font-size: 0.8rem;">Subir nuevo</button>
+                        <button type="button" class="btn-outline" onclick="quitarLogo()" style="padding: 6px 12px; font-size: 0.8rem; border-color: transparent; color: var(--red);">Quitar</button>
                     </div>
                 </div>
             </div>
@@ -217,18 +238,75 @@
 
 @push('scripts-bottom')
 <script>
+// --- Manejo de la subida de Logo en Base64 ---
+document.getElementById('logoFileInput')?.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 1024 * 1024) {
+        alert("El archivo es demasiado grande. Máximo 1MB.");
+        this.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const base64String = event.target.result;
+        
+        // Poner en el input hidden
+        document.getElementById('logoBase64Input').value = base64String;
+        document.getElementById('quitarLogoInput').value = '0';
+        
+        // Mostrar preview
+        const img = document.getElementById('logoPreviewImg');
+        img.src = base64String;
+        img.style.display = 'block';
+        
+        const placeholder = document.getElementById('logoIconPlaceholder');
+        if(placeholder) placeholder.style.display = 'none';
+        
+        document.getElementById('logoPreviewContainer').style.border = 'none';
+    };
+    reader.readAsDataURL(file);
+});
+
+function quitarLogo() {
+    document.getElementById('logoBase64Input').value = '';
+    document.getElementById('quitarLogoInput').value = '1';
+    document.getElementById('logoFileInput').value = '';
+    
+    // Restaurar preview
+    const img = document.getElementById('logoPreviewImg');
+    img.src = '';
+    img.style.display = 'none';
+    
+    const placeholder = document.getElementById('logoIconPlaceholder');
+    if(placeholder) placeholder.style.display = 'block';
+    
+    document.getElementById('logoPreviewContainer').style.border = '1px dashed var(--border-color)';
+}
+
 function switchTab(tab) {
     // Esconder todo
-    document.getElementById('tab-perfil').style.display = 'none';
-    document.getElementById('tab-horarios').style.display = 'none';
+    const tabPerfil = document.getElementById('tab-perfil');
+    if (tabPerfil) tabPerfil.style.display = 'none';
+    
+    const tabHorarios = document.getElementById('tab-horarios');
+    if (tabHorarios) tabHorarios.style.display = 'none';
     
     // Quitar active a menú
-    document.getElementById('menu-perfil').classList.remove('active');
-    document.getElementById('menu-horarios').classList.remove('active');
+    const menuPerfil = document.getElementById('menu-perfil');
+    if (menuPerfil) menuPerfil.classList.remove('active');
+    
+    const menuHorarios = document.getElementById('menu-horarios');
+    if (menuHorarios) menuHorarios.classList.remove('active');
     
     // Mostrar lo seleccionado
-    document.getElementById('tab-' + tab).style.display = 'block';
-    document.getElementById('menu-' + tab).classList.add('active');
+    const selectedTab = document.getElementById('tab-' + tab);
+    if (selectedTab) selectedTab.style.display = 'block';
+    
+    const selectedMenu = document.getElementById('menu-' + tab);
+    if (selectedMenu) selectedMenu.classList.add('active');
 }
 </script>
 @endpush

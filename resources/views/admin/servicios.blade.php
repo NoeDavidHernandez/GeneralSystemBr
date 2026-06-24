@@ -253,10 +253,10 @@
 
 @push('scripts')
 <script>
-    const modal = document.getElementById('servicioModal');
-    const form = document.getElementById('servicioForm');
-    
     function openModal(mode, data = null) {
+        const modal = document.getElementById('servicioModal');
+        const form = document.getElementById('servicioForm');
+        
         modal.classList.add('show');
         
         if (mode === 'edit') {
@@ -282,11 +282,13 @@
     }
     
     function closeModal() {
+        const modal = document.getElementById('servicioModal');
         modal.classList.remove('show');
     }
 
     // Cerrar si se da clic fuera del modal
     window.onclick = function(event) {
+        const modal = document.getElementById('servicioModal');
         if (event.target == modal) {
             closeModal();
         }
