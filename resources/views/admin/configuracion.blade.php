@@ -141,6 +141,25 @@
                     </div>
                 </div>
             </div>
+
+            <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border-color);">
+                <h3 class="config-section-title" style="display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="lock" style="color: var(--accent); width: 20px;"></i>
+                    Seguridad y Acceso
+                </h3>
+                <p class="config-section-desc">Cambia la contraseña que usas para iniciar sesión en tu panel.</p>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Nueva Contraseña (Opcional)</label>
+                        <input type="password" name="password" class="form-control" placeholder="Mínimo 8 caracteres" minlength="8">
+                    </div>
+                    <div class="form-group">
+                        <label>Confirmar Nueva Contraseña</label>
+                        <input type="password" name="password_confirmation" class="form-control" placeholder="Vuelve a escribir la contraseña">
+                    </div>
+                </div>
+            </div>
             
             </div>
             @endif

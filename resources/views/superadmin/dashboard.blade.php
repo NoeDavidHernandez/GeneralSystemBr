@@ -502,6 +502,11 @@
                 </div>
 
                 <div style="margin-bottom: 15px;">
+                    <label style="display: block; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 6px;">Contraseña Inicial (Para iniciar sesión)</label>
+                    <input type="text" name="password" required minlength="8" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-card); background: var(--bg-secondary); color: var(--text-primary);">
+                </div>
+
+                <div style="margin-bottom: 15px;">
                     <label style="display: block; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 6px;">WhatsApp Phone ID (Meta)</label>
                     <input type="text" name="whatsapp_phone_id" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-card); background: var(--bg-secondary); color: var(--text-primary);">
                 </div>

@@ -18,6 +18,7 @@ class SuperAdminNegociosController extends Controller
             'whatsapp_phone_id' => 'required|string|max:60|unique:barberias,whatsapp_phone_id',
             'whatsapp_token' => 'required|string',
             'whatsapp_admin_numero' => 'required|string|max:20',
+            'password' => 'required|string|min:8',
         ]);
 
         $barberia = Barberia::create([
@@ -36,11 +37,11 @@ class SuperAdminNegociosController extends Controller
         \App\Models\User::create([
             'name' => 'Admin ' . $request->nombre,
             'email' => $request->email,
-            'password' => bcrypt('password123'), // Contraseña por defecto
+            'password' => bcrypt($request->password), // Contraseña especificada
             'barberia_id' => $barberia->id,
         ]);
 
-        return back()->with('success', 'Negocio registrado exitosamente con ' . $request->dias_prueba . ' días de prueba. El acceso es: ' . $request->email . ' / password123');
+        return back()->with('success', 'Negocio registrado exitosamente con ' . $request->dias_prueba . ' días de prueba. El acceso es: ' . $request->email . ' / ' . $request->password);
     }
 
     public function show(Barberia $barberia)

@@ -58,6 +58,7 @@ class ConfiguracionController extends Controller
             'comida_inicio' => 'nullable|string',
             'comida_fin' => 'nullable|string',
             'dias_cerrado' => 'nullable|array',
+            'password' => 'nullable|string|min:8|confirmed',
         ]);
 
         $horarioActual = $barberia->horario_json ?? [];
@@ -81,6 +82,12 @@ class ConfiguracionController extends Controller
             'whatsapp_token' => $request->whatsapp_token,
             'horario_json' => $horarioNuevo,
         ]);
+
+        if ($request->filled('password')) {
+            $user->update([
+                'password' => bcrypt($request->password)
+            ]);
+        }
 
         return back()->with('success', 'Configuración actualizada correctamente.');
     }
