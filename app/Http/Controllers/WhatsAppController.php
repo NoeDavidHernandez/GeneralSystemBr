@@ -88,7 +88,11 @@ class WhatsAppController extends Controller
         $phoneNumberId = $value['metadata']['phone_number_id'] ?? null;
         $messages      = $value['messages'] ?? [];
 
-        // DEBUG TEMPORAL
+        // DEBUG TEMPORAL DIRECTO A RENDER LOGS
+        error_log("WHATSAPP DEBUG: Ingresa webhook.");
+        error_log("WHATSAPP DEBUG: Phone ID recibido = " . ($phoneNumberId ?? 'N/A'));
+        error_log("WHATSAPP DEBUG: Has messages = " . (!empty($messages) ? 'SI' : 'NO'));
+
         Log::info('WhatsApp DEBUG', [
             'phone_number_id' => $phoneNumberId,
             'has_messages'    => ! empty($messages),
@@ -101,11 +105,14 @@ class WhatsAppController extends Controller
         $barberia = \App\Models\Barberia::where('whatsapp_phone_id', $phoneNumberId)->first();
 
         if (! $barberia) {
+            error_log("WHATSAPP ERROR: No se encontró barbería con el Phone ID: " . $phoneNumberId);
             Log::warning('WhatsApp: phone_number_id sin barbería asociada', [
                 'phone_number_id' => $phoneNumberId,
             ]);
             return;
         }
+
+        error_log("WHATSAPP DEBUG: Barbería encontrada = " . $barberia->nombre);
 
         if (! $barberia->activo) {
             Log::info("WhatsApp: Mensaje ignorado. La barbería {$barberia->nombre} está inactiva.");
