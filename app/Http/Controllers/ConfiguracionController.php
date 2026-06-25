@@ -90,9 +90,9 @@ class ConfiguracionController extends Controller
             'email' => $request->email,
             'direccion' => $request->direccion,
             'descripcion' => $request->descripcion,
-            'whatsapp_admin_numero' => $request->whatsapp_admin_numero,
-            'whatsapp_phone_id' => $request->whatsapp_phone_id,
-            'whatsapp_token' => $request->whatsapp_token,
+            'whatsapp_admin_numero' => $request->whatsapp_admin_numero ? trim($request->whatsapp_admin_numero) : null,
+            'whatsapp_phone_id' => $request->whatsapp_phone_id ? trim($request->whatsapp_phone_id) : null,
+            'whatsapp_token' => $request->whatsapp_token ? trim($request->whatsapp_token) : null,
             'horario_json' => $horarioNuevo,
         ]);
 
