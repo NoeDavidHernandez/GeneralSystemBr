@@ -444,6 +444,48 @@ class AdminDashboardController extends Controller
         return compact('labels', 'nuevos', 'recurrentes');
     }
 
+    private function estadosCitas(Carbon $inicio, Carbon $fin): array
+    {
+        $citas = $this->getCitasBaseQuery()
+            ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
+            ->get();
+
+        return [
+            'completadas' => $citas->where('estado', 'completada')->count(),
+            'canceladas'  => $citas->where('estado', 'cancelada')->count(),
+            'pendientes'  => $citas->where('estado', 'pendiente')->count(),
+            'no_asistio'  => $citas->where('estado', 'no_asistio')->count(),
+        ];
+    }
+
+    private function topClientes(Carbon $inicio, Carbon $fin): array
+    {
+        $citas = $this->getCitasBaseQuery()
+            ->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()])
+            ->where('estado', 'completada')
+            ->with('cliente')
+            ->get();
+
+        $clientes = [];
+        foreach ($citas as $cita) {
+            if (!$cita->cliente) continue;
+            
+            $clienteId = $cita->cliente->id;
+            if (!isset($clientes[$clienteId])) {
+                $clientes[$clienteId] = [
+                    'nombre'   => $cita->cliente->nombre,
+                    'telefono' => $cita->cliente->telefono,
+                    'visitas'  => 0,
+                ];
+            }
+            $clientes[$clienteId]['visitas']++;
+        }
+
+        usort($clientes, fn($a, $b) => $b['visitas'] <=> $a['visitas']);
+        
+        return array_slice($clientes, 0, 5);
+    }
+
     private function horasPico(Carbon $inicio, Carbon $fin): array
     {
         $barberiaId = Auth::user()->barberia_id;
