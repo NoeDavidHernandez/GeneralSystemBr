@@ -21,7 +21,7 @@ class EnviarRecordatorios extends Command
         $limiteInferior = $ahora->copy()->addMinutes(30);
         $limiteSuperior = $ahora->copy()->addMinutes(45);
 
-        $citas = Cita::with(['cliente', 'barberia', 'servicio'])
+        $citas = Cita::with(['cliente', 'barberia', 'servicios', 'barbero'])
             ->whereIn('estado', ['pendiente', 'confirmada'])
             ->whereDate('fecha', $ahora->toDateString())
             ->get()
@@ -48,13 +48,33 @@ class EnviarRecordatorios extends Command
             try {
                 $hora = Carbon::createFromFormat('H:i:s', $cita->hora_inicio)->format('g:i A');
                 
+                $nombresServicios = $cita->servicios->pluck('nombre')->join(', ');
+
                 $mensaje = "⏰ *¡Recordatorio de Cita!*\n\n"
                          . "Hola {$cita->cliente->nombre},\n"
-                         . "Te recordamos que tu cita para *{$cita->servicio->nombre}* es en aproximadamente 30 minutos (a las {$hora}).\n\n"
+                         . "Te recordamos que tu cita para *{$nombresServicios}* es en aproximadamente 30 minutos (a las {$hora}).\n\n"
                          . "📍 {$cita->barberia->direccion}\n\n"
                          . "¡Te esperamos! 💈";
 
                 $api->enviarTexto($cita->cliente->telefono, $cita->barberia, $mensaje);
+
+                // Enviar también al barbero o administrador
+                $barberoNumero = $cita->barberia->whatsapp_admin_numero;
+                if ($cita->barbero && $cita->barbero->telefono) {
+                    $barberoNumero = preg_replace('/[^0-9]/', '', $cita->barbero->telefono);
+                }
+                if ($barberoNumero) {
+                    $mensajeBarbero = "🔔 *Recordatorio de Cita Próxima*\n\n"
+                                    . "Tienes una cita en 30 minutos (a las {$hora}).\n"
+                                    . "👤 Cliente: {$cita->cliente->nombre}\n"
+                                    . "✂️ Servicios: {$nombresServicios}\n"
+                                    . "📱 Teléfono: {$cita->cliente->telefono}";
+                    try {
+                        $api->enviarTexto($barberoNumero, $cita->barberia, $mensajeBarbero);
+                    } catch (\Exception $e) {
+                        Log::error("Error enviando recordatorio 30m al barbero: " . $e->getMessage());
+                    }
+                }
 
                 RecordatorioLog::create([
                     'cita_id' => $cita->id,

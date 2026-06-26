@@ -23,7 +23,12 @@ class AdminDashboardController extends Controller
         $servicios = Servicio::where('barberia_id', $barberiaId)->where('activo', true)->get();
         $barberos = Barbero::where('barberia_id', $barberiaId)->where('activo', true)->get();
 
-        return view('admin.dashboard', compact('servicios', 'barberos'));
+        $chatsPausados = Cliente::where('barberia_id', $barberiaId)
+            ->whereHas('convEstado', function ($query) {
+                $query->where('modo_asesor', true);
+            })->with('convEstado')->get();
+
+        return view('admin.dashboard', compact('servicios', 'barberos', 'chatsPausados'));
     }
 
     // ─── API de datos para gráficas ───────────────────────────────────────
@@ -175,6 +180,28 @@ class AdminDashboardController extends Controller
         $nombreArchivo = 'reporte_barberia_' . $fechaInicio->format('Ymd') . '_' . $fechaFin->format('Ymd') . '.pdf';
 
         return $pdf->download($nombreArchivo);
+    }
+
+    // ─── Reactivar Bot Manualmente ──────────────────────────────────────────
+
+    public function reactivarBot(Request $request, $telefono)
+    {
+        $barberiaId = Auth::user()->barberia_id;
+        $cliente = Cliente::where('telefono', $telefono)->where('barberia_id', $barberiaId)->firstOrFail();
+        $estado = \App\Models\ConvEstado::where('telefono', $telefono)->where('modo_asesor', true)->firstOrFail();
+
+        $estado->desactivarModoAsesor();
+
+        // Enviar mensaje al cliente
+        try {
+            $botService = app(\App\Services\WhatsAppApiService::class);
+            $mensaje = "Un administrador ha reactivado el asistente automático. ¿En qué más te puedo ayudar?";
+            $botService->enviarTexto($telefono, $cliente->barberia, $mensaje);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Error reactivando bot manualmente: " . $e->getMessage());
+        }
+
+        return back()->with('success', "El bot ha sido reactivado para el cliente {$cliente->nombre}.");
     }
 
     // ─── Cálculos privados ────────────────────────────────────────────────

@@ -10,3 +10,5 @@ Artisan::command('inspire', function () {
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('citas:enviar-recordatorios')->everyMinute();
+Schedule::command('bot:reiniciar-asesores')->everyMinute();
+

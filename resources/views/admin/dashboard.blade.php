@@ -101,6 +101,39 @@
 </div>
 @endif
 
+@if(isset($chatsPausados) && $chatsPausados->count() > 0)
+<div class="card citas-panel" style="border:1px solid var(--gold); background:rgba(212,168,83,0.05); margin-bottom: 28px;">
+    <div class="section-title" style="color:var(--gold);">
+        <i data-lucide="message-square-warning" style="margin-right:8px;"></i> Clientes en espera de un asesor
+        <span class="count-badge" style="background:var(--gold);color:#000;">{{ $chatsPausados->count() }}</span>
+    </div>
+    <div class="citas-table-wrap">
+        <table class="citas-table">
+            <thead>
+                <tr><th>Cliente</th><th>Teléfono</th><th>Hora de Solicitud</th><th>Acciones</th></tr>
+            </thead>
+            <tbody>
+                @foreach($chatsPausados as $cliente)
+                <tr>
+                    <td><strong>{{ $cliente->nombre }}</strong></td>
+                    <td>{{ $cliente->telefono }}</td>
+                    <td>{{ $cliente->convEstado->updated_at->diffForHumans() }}</td>
+                    <td>
+                        <form action="{{ route('admin.chats.reactivar', $cliente->telefono) }}" method="POST" style="display:inline;">
+                            @csrf
+                            <button type="submit" class="btn" style="background:var(--bg-card);border:1px solid var(--border-color);color:var(--text-primary);padding:6px 12px;font-size:0.8rem;">
+                                <i data-lucide="bot"></i> Reactivar Bot
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+</div>
+@endif
+
 <div class="card citas-panel">
     <div class="section-title">
         Próximas citas hoy

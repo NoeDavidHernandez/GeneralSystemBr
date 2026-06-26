@@ -123,6 +123,8 @@ class WhatsAppApiService
                 );
 
             if ($response->failed()) {
+                $errorMsg = "WHATSAPP API ERROR: Status " . $response->status() . " Body: " . json_encode($response->json());
+                error_log($errorMsg);
                 Log::error('WhatsApp API error', [
                     'barberia_id' => $barberia->id,
                     'status'      => $response->status(),
@@ -132,6 +134,7 @@ class WhatsAppApiService
                 return false;
             }
 
+            error_log("WHATSAPP DEBUG: Mensaje enviado exitosamente a " . $payload['to']);
             return true;
 
         } catch (\Throwable $e) {

@@ -42,6 +42,8 @@ Route::prefix('admin')->middleware(['auth', \App\Http\Middleware\CheckBarberiaAc
     Route::post('/citas/{cita}/completar', [AdminDashboardController::class, 'completarCita'])->name('admin.citas.completar');
     Route::post('/citas/local', [AdminDashboardController::class, 'registrarServicioLocal'])->name('admin.citas.local');
     Route::get('/reporte-pdf', [AdminDashboardController::class, 'exportarPdf'])->name('admin.reporte.pdf');
+    Route::post('/chats/{telefono}/reactivar', [AdminDashboardController::class, 'reactivarBot'])->name('admin.chats.reactivar');
+
     
     // Clientes
     Route::get('/clientes', [\App\Http\Controllers\ClientesController::class, 'index'])->name('admin.clientes.index');
